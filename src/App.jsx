@@ -1,94 +1,44 @@
 import { useRef, useState } from 'react';
-
-import Phaser from 'phaser';
 import { PhaserGame } from './PhaserGame';
+import { gameState, SaveManager } from './game/utils/SaveManager';
 
-function App ()
-{
-    // The sprite can only be moved in the MainMenu Scene
-    const [canMoveSprite, setCanMoveSprite] = useState(true);
-    
-    //  References to the PhaserGame component (game and scene are exposed)
+function App() {
     const phaserRef = useRef();
-    const [spritePosition, setSpritePosition] = useState({ x: 0, y: 0 });
+    const [resetMsg, setResetMsg] = useState('');
 
-    const changeScene = () => {
-
-        const scene = phaserRef.current.scene;
-
-        if (scene)
-        {
-            scene.changeScene();
-        }
-    }
-
-    const moveSprite = () => {
-
-        const scene = phaserRef.current.scene;
-
-        if (scene && scene.scene.key === 'MainMenu')
-        {
-            // Get the update logo position
-            scene.moveLogo(({ x, y }) => {
-
-                setSpritePosition({ x, y });
-
-            });
-        }
-    }
-
-    const addSprite = () => {
-
-        const scene = phaserRef.current.scene;
-
-        if (scene)
-        {
-            // Add more stars
-            const x = Phaser.Math.Between(64, scene.scale.width - 64);
-            const y = Phaser.Math.Between(64, scene.scale.height - 64);
-
-            //  `add.sprite` is a Phaser GameObjectFactory method and it returns a Sprite Game Object instance
-            const star = scene.add.sprite(x, y, 'star');
-
-            //  ... which you can then act upon. Here we create a Phaser Tween to fade the star sprite in and out.
-            //  You could, of course, do this from within the Phaser Scene code, but this is just an example
-            //  showing that Phaser objects and systems can be acted upon from outside of Phaser itself.
-            scene.add.tween({
-                targets: star,
-                duration: 500 + Math.random() * 1000,
-                alpha: 0,
-                yoyo: true,
-                repeat: -1
-            });
-        }
-    }
-
-    // Event emitted from the PhaserGame component
-    const currentScene = (scene) => {
-
-        setCanMoveSprite(scene.scene.key !== 'MainMenu');
-        
-    }
+    const handleReset = () => {
+        if (!window.confirm('Vraiment recommencer depuis le début ? La sauvegarde sera effacée.')) return;
+        gameState.reset();
+        SaveManager.reset();
+        // Recharger la page pour repartir proprement
+        window.location.reload();
+    };
 
     return (
         <div id="app">
-            <PhaserGame ref={phaserRef} currentActiveScene={currentScene} />
-            <div>
-                <div>
-                    <button className="button" onClick={changeScene}>Change Scene</button>
-                </div>
-                <div>
-                    <button disabled={canMoveSprite} className="button" onClick={moveSprite}>Toggle Movement</button>
-                </div>
-                <div className="spritePosition">Sprite Position:
-                    <pre>{`{\n  x: ${spritePosition.x}\n  y: ${spritePosition.y}\n}`}</pre>
-                </div>
-                <div>
-                    <button className="button" onClick={addSprite}>Add New Sprite</button>
+            <PhaserGame ref={phaserRef} />
+            <div className="side-panel">
+                <h2>Le Grimoire Sacré</h2>
+                <p className="info">L'aventure d'Eldrin le Sorcier</p>
+                <button className="button" onClick={handleReset}>
+                    Recommencer la partie
+                </button>
+                {resetMsg && <p className="info">{resetMsg}</p>}
+                <div className="controls">
+                    <h3>Contrôles</h3>
+                    <ul>
+                        <li><b>Flèches</b> : se déplacer</li>
+                        <li><b>Espace</b> : action / combat</li>
+                        <li><b>1, 2, 3</b> : changer de sort</li>
+                        <li><b>0–9</b> : taper la réponse</li>
+                        <li><b>Entrée</b> : valider</li>
+                        <li><b>Échap</b> : fuir le combat</li>
+                        <li><b>H</b> : retour au hub</li>
+                    </ul>
                 </div>
             </div>
         </div>
-    )
+    );
 }
 
-export default App
+export default App;
