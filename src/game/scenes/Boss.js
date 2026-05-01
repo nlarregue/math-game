@@ -101,7 +101,7 @@ export class Boss extends Scene {
             const nameText = this.add.text(x, H * 0.52, `[${s.key}] ${s.name}`, {
                 fontFamily: 'sans-serif', fontSize: '14px', color: '#ffffff', fontStyle: 'bold'
             }).setOrigin(0.5);
-            const dmgText = this.add.text(x, H * 0.555, `${s.dmg} dégât${s.dmg > 1 ? 's' : ''} · ${s.opName}`, {
+            const dmgText = this.add.text(x, H * 0.545, `${s.dmg} dégât${s.dmg > 1 ? 's' : ''} · ${s.opName}`, {
                 fontFamily: 'sans-serif', fontSize: '11px', color: '#ffffff'
             }).setOrigin(0.5);
             this.spellButtons.push({ ...s, x, btnGraphics, nameText, dmgText });
@@ -292,9 +292,9 @@ export class Boss extends Scene {
             const active = c.spell === b.spell;
             b.btnGraphics.clear();
             b.btnGraphics.fillStyle(unlocked ? (active ? b.color : 0x222222) : 0x333333);
-            b.btnGraphics.fillRect(b.x - 60, H * 0.5, 120, 40);
+            b.btnGraphics.fillRect(b.x - 65, H * 0.5, 130, 50);
             b.btnGraphics.lineStyle(2, active ? Colors.white : (unlocked ? b.color : 0x555555));
-            b.btnGraphics.strokeRect(b.x - 60, H * 0.5, 120, 40);
+            b.btnGraphics.strokeRect(b.x - 65, H * 0.5, 130, 50);
             b.nameText.setColor(unlocked ? (active ? '#000000' : '#ffffff') : '#777777');
             b.dmgText.setColor(unlocked ? (active ? '#000000' : '#ffffff') : '#777777');
         });
