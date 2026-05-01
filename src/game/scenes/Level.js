@@ -120,6 +120,11 @@ export class Level extends Scene {
 
         this.combatEnemyGraphics = this.add.graphics();
 
+        this.combatEnemyHpBar = this.add.graphics();
+        this.combatEnemyHpText = this.add.text(W / 2, H * 0.37, '', {
+            fontFamily: 'sans-serif', fontSize: '12px', color: '#ffffff', fontStyle: 'bold'
+        }).setOrigin(0.5);
+
         this.warningText = this.add.text(W / 2, H * 0.4, '', {
             fontFamily: 'sans-serif', fontSize: '14px', color: '#7fdbff', fontStyle: 'bold', align: 'center'
         }).setOrigin(0.5);
@@ -134,9 +139,9 @@ export class Level extends Scene {
 
         this.spellButtons = [];
         const spells = [
-            { key: '1', name: 'Feu', spell: 'feu', color: Colors.fire, dmg: 1, op: '+' },
-            { key: '2', name: 'Glace', spell: 'glace', color: Colors.ice, dmg: 2, op: '−' },
-            { key: '3', name: 'Foudre', spell: 'foudre', color: Colors.lightning, dmg: 3, op: '×' }
+            { key: '1', name: 'Feu', spell: 'feu', color: Colors.fire, dmg: 1, opName: 'Addition' },
+            { key: '2', name: 'Glace', spell: 'glace', color: Colors.ice, dmg: 2, opName: 'Soustraction' },
+            { key: '3', name: 'Foudre', spell: 'foudre', color: Colors.lightning, dmg: 3, opName: 'Multiplication' }
         ];
         spells.forEach((s, i) => {
             const x = W * 0.25 + i * (W * 0.25);
@@ -144,7 +149,7 @@ export class Level extends Scene {
             const nameText = this.add.text(x, H * 0.52, `[${s.key}] ${s.name}`, {
                 fontFamily: 'sans-serif', fontSize: '14px', color: '#ffffff', fontStyle: 'bold'
             }).setOrigin(0.5);
-            const dmgText = this.add.text(x, H * 0.555, `${s.dmg} dégât${s.dmg > 1 ? 's' : ''}  ${s.op}`, {
+            const dmgText = this.add.text(x, H * 0.555, `${s.dmg} dégât${s.dmg > 1 ? 's' : ''} · ${s.opName}`, {
                 fontFamily: 'sans-serif', fontSize: '11px', color: '#ffffff'
             }).setOrigin(0.5);
             this.spellButtons.push({ ...s, x, btnGraphics, nameText, dmgText });
@@ -169,6 +174,7 @@ export class Level extends Scene {
 
         this.combatLayer.add([
             overlay, box, this.combatTitle, this.combatEnemyGraphics,
+            this.combatEnemyHpBar, this.combatEnemyHpText,
             this.warningText, this.resistText, this.spellChoiceLabel,
             ...this.spellButtons.flatMap(b => [b.btnGraphics, b.nameText, b.dmgText]),
             this.opText, this.inputBox, this.inputText, this.feedbackText, this.combatHint
@@ -416,6 +422,21 @@ export class Level extends Scene {
         this.combatEnemyGraphics.y = H * 0.28;
         this.combatEnemyGraphics.setScale(2.5);
         drawEnemy(this.combatEnemyGraphics, { ...c.enemy, x: 0, y: 0 }, this.t, { showHpBar: false });
+
+        // Barre de vie du monstre
+        const enemy = c.enemy;
+        const barW = 160;
+        const barH = 14;
+        const barX = W / 2 - barW / 2;
+        const barY = H * 0.355;
+        this.combatEnemyHpBar.clear();
+        this.combatEnemyHpBar.fillStyle(0x330000, 0.9);
+        this.combatEnemyHpBar.fillRect(barX, barY, barW, barH);
+        this.combatEnemyHpBar.fillStyle(0xe24b4a);
+        this.combatEnemyHpBar.fillRect(barX, barY, barW * (enemy.hp / enemy.maxHp), barH);
+        this.combatEnemyHpBar.lineStyle(1, 0xffffff, 0.6);
+        this.combatEnemyHpBar.strokeRect(barX, barY, barW, barH);
+        this.combatEnemyHpText.setText(`PV : ${enemy.hp} / ${enemy.maxHp}`).setY(barY + barH + 6);
 
         // Avertissement volant
         if (c.locked === 'must_freeze') {

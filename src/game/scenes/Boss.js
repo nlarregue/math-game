@@ -80,15 +80,20 @@ export class Boss extends Scene {
 
         this.combatBossGraphics = this.add.graphics();
 
+        this.combatBossHpBar = this.add.graphics();
+        this.combatBossHpText = this.add.text(W / 2, H * 0.42, '', {
+            fontFamily: 'sans-serif', fontSize: '12px', color: '#ffffff', fontStyle: 'bold'
+        }).setOrigin(0.5);
+
         this.spellChoiceLabel = this.add.text(W / 2, H * 0.47, 'Sort : appuie sur 1, 2 ou 3', {
             fontFamily: 'sans-serif', fontSize: '13px', color: '#ffffff'
         }).setOrigin(0.5);
 
         this.spellButtons = [];
         const spells = [
-            { key: '1', name: 'Feu', spell: 'feu', color: Colors.fire, dmg: 1, op: '+' },
-            { key: '2', name: 'Glace', spell: 'glace', color: Colors.ice, dmg: 2, op: '−' },
-            { key: '3', name: 'Foudre', spell: 'foudre', color: Colors.lightning, dmg: 3, op: '×' }
+            { key: '1', name: 'Feu', spell: 'feu', color: Colors.fire, dmg: 1, opName: 'Addition' },
+            { key: '2', name: 'Glace', spell: 'glace', color: Colors.ice, dmg: 2, opName: 'Soustraction' },
+            { key: '3', name: 'Foudre', spell: 'foudre', color: Colors.lightning, dmg: 3, opName: 'Multiplication' }
         ];
         spells.forEach((s, i) => {
             const x = W * 0.25 + i * (W * 0.25);
@@ -96,7 +101,7 @@ export class Boss extends Scene {
             const nameText = this.add.text(x, H * 0.52, `[${s.key}] ${s.name}`, {
                 fontFamily: 'sans-serif', fontSize: '14px', color: '#ffffff', fontStyle: 'bold'
             }).setOrigin(0.5);
-            const dmgText = this.add.text(x, H * 0.555, `${s.dmg} dégât${s.dmg > 1 ? 's' : ''}  ${s.op}`, {
+            const dmgText = this.add.text(x, H * 0.555, `${s.dmg} dégât${s.dmg > 1 ? 's' : ''} · ${s.opName}`, {
                 fontFamily: 'sans-serif', fontSize: '11px', color: '#ffffff'
             }).setOrigin(0.5);
             this.spellButtons.push({ ...s, x, btnGraphics, nameText, dmgText });
@@ -121,6 +126,7 @@ export class Boss extends Scene {
 
         this.combatLayer.add([
             overlay, box, this.combatTitle, this.combatBossGraphics,
+            this.combatBossHpBar, this.combatBossHpText,
             this.spellChoiceLabel,
             ...this.spellButtons.flatMap(b => [b.btnGraphics, b.nameText, b.dmgText]),
             this.opText, this.inputBox, this.inputText, this.feedbackText, this.combatHint
@@ -266,6 +272,20 @@ export class Boss extends Scene {
         this.combatBossGraphics.y = H * 0.3;
         this.combatBossGraphics.setScale(0.9);
         drawDragon(this.combatBossGraphics, 0, 0, this.t);
+
+        // Barre de vie du dragon en combat
+        const barW = 200;
+        const barH = 14;
+        const barX = W / 2 - barW / 2;
+        const barY = H * 0.4;
+        this.combatBossHpBar.clear();
+        this.combatBossHpBar.fillStyle(0x330000, 0.9);
+        this.combatBossHpBar.fillRect(barX, barY, barW, barH);
+        this.combatBossHpBar.fillStyle(0xe24b4a);
+        this.combatBossHpBar.fillRect(barX, barY, barW * (this.boss.hp / this.boss.maxHp), barH);
+        this.combatBossHpBar.lineStyle(1, 0xffffff, 0.6);
+        this.combatBossHpBar.strokeRect(barX, barY, barW, barH);
+        this.combatBossHpText.setText(`Dragon : ${this.boss.hp} / ${this.boss.maxHp}`).setY(barY + barH + 6);
 
         this.spellButtons.forEach(b => {
             const unlocked = gameState.data.spells.includes(b.spell);
