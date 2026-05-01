@@ -322,6 +322,7 @@ export class Level extends Scene {
                     this.spawnEnemies();
                 }
             } else {
+                c.op = null;
                 this.time.delayedCall(800, () => { if (this.combat) this.generateOp(this.combat.spell); });
             }
         } else {
@@ -470,6 +471,8 @@ export class Level extends Scene {
         if (c.op) {
             const color = c.spell === 'feu' ? '#ff6b35' : c.spell === 'glace' ? '#7fdbff' : '#ffe44d';
             this.opText.setText(`${c.op.a} ${c.op.sym} ${c.op.b} = ?`).setColor(color);
+        } else {
+            this.opText.setText('· · ·').setColor('#666666');
         }
 
         // Champ de saisie
@@ -493,6 +496,7 @@ export class Level extends Scene {
             this.combatLayer.setVisible(false);
             return;
         }
+        if (!this.combat.op) return;
         if (Phaser.Input.Keyboard.JustDown(this.enterKey)) {
             this.submitAnswer();
             return;
