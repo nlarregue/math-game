@@ -16,54 +16,67 @@ export const Colors = {
 
 // ========== PERSONNAGES ==========
 
-export function drawWizard(g, x, y, scale = 1, casting = false) {
+export function drawWizard(g, x, y, scale = 1, casting = false, walkPhase = 0) {
     const s = scale;
     g.clear();
+
+    // Vertical bob when walking
+    const bobY = walkPhase > 0 ? Math.sin(walkPhase * 0.35) * 2 * s : 0;
+    const dy = y + bobY;
+
+    // Feet (only visible when walking)
+    if (walkPhase > 0) {
+        const step = Math.sin(walkPhase * 0.35);
+        g.fillStyle(0x3a2a6a);
+        g.fillEllipse(x - 5 * s + step * 5 * s, dy + 27 * s, 9 * s, 5 * s);
+        g.fillEllipse(x + 5 * s - step * 5 * s, dy + 27 * s, 9 * s, 5 * s);
+    }
+
     // Robe
     g.fillStyle(0x4a3a8a);
     g.beginPath();
-    g.moveTo(x - 15 * s, y + 25 * s);
-    g.lineTo(x + 15 * s, y + 25 * s);
-    g.lineTo(x + 10 * s, y + 5 * s);
-    g.lineTo(x - 10 * s, y + 5 * s);
+    g.moveTo(x - 15 * s, dy + 25 * s);
+    g.lineTo(x + 15 * s, dy + 25 * s);
+    g.lineTo(x + 10 * s, dy + 5 * s);
+    g.lineTo(x - 10 * s, dy + 5 * s);
     g.closePath();
     g.fillPath();
     // Tête
     g.fillStyle(0xf4c8a0);
-    g.fillCircle(x, y - 2 * s, 8 * s);
+    g.fillCircle(x, dy - 2 * s, 8 * s);
     // Barbe
     g.fillStyle(0xe0e0e0);
     g.beginPath();
-    g.moveTo(x - 6 * s, y + 2 * s);
-    g.lineTo(x + 6 * s, y + 2 * s);
-    g.lineTo(x + 4 * s, y + 10 * s);
-    g.lineTo(x - 4 * s, y + 10 * s);
+    g.moveTo(x - 6 * s, dy + 2 * s);
+    g.lineTo(x + 6 * s, dy + 2 * s);
+    g.lineTo(x + 4 * s, dy + 10 * s);
+    g.lineTo(x - 4 * s, dy + 10 * s);
     g.closePath();
     g.fillPath();
     // Chapeau
     g.fillStyle(0x3a2a6a);
     g.beginPath();
-    g.moveTo(x - 12 * s, y - 8 * s);
-    g.lineTo(x + 12 * s, y - 8 * s);
-    g.lineTo(x + 2 * s, y - 25 * s);
+    g.moveTo(x - 12 * s, dy - 8 * s);
+    g.lineTo(x + 12 * s, dy - 8 * s);
+    g.lineTo(x + 2 * s, dy - 25 * s);
     g.closePath();
     g.fillPath();
     // Étoile chapeau
     g.fillStyle(Colors.gold);
-    g.fillCircle(x - 3 * s, y - 15 * s, 2 * s);
+    g.fillCircle(x - 3 * s, dy - 15 * s, 2 * s);
     // Bâton
     g.lineStyle(2 * s, 0x8b5a2b);
     if (casting) {
-        g.lineBetween(x + 15 * s, y + 10 * s, x + 25 * s, y - 15 * s);
+        g.lineBetween(x + 15 * s, dy + 10 * s, x + 25 * s, dy - 15 * s);
     } else {
-        g.lineBetween(x + 12 * s, y + 15 * s, x + 18 * s, y - 15 * s);
+        g.lineBetween(x + 12 * s, dy + 15 * s, x + 18 * s, dy - 15 * s);
     }
     // Cristal du bâton
     g.fillStyle(casting ? Colors.fire : Colors.blue);
     if (casting) {
-        g.fillCircle(x + 25 * s, y - 15 * s, 4 * s);
+        g.fillCircle(x + 25 * s, dy - 15 * s, 4 * s);
     } else {
-        g.fillCircle(x + 18 * s, y - 15 * s, 3 * s);
+        g.fillCircle(x + 18 * s, dy - 15 * s, 3 * s);
     }
 }
 
@@ -399,6 +412,285 @@ export function drawCastle(g, t, w, h) {
         g.fillCircle(x, 150 + flame, 8);
         g.fillStyle(Colors.gold);
         g.fillCircle(x, 150 + flame, 4);
+    }
+}
+
+export function drawHouseExterior(g, t, w, h) {
+    g.clear();
+
+    // Ciel (aube)
+    g.fillStyle(0x150a2a);
+    g.fillRect(0, 0, w, h * 0.38);
+    g.fillStyle(0x2a1540);
+    g.fillRect(0, h * 0.28, w, h * 0.12);
+    // Lueur orange à l'horizon
+    g.fillStyle(0xcc4410, 0.35);
+    g.fillRect(0, h * 0.36, w, h * 0.1);
+    g.fillStyle(0xff7722, 0.18);
+    g.fillRect(0, h * 0.41, w, h * 0.07);
+
+    // Étoiles qui s'estompent
+    for (let i = 0; i < 30; i++) {
+        const sx = (i * 137 + 11) % w;
+        const sy = (i * 71 + 7) % (h * 0.3);
+        const a = 0.2 + Math.sin(t * 0.04 + i * 0.7) * 0.18;
+        g.fillStyle(0xffffff, a);
+        g.fillRect(sx, sy, 2, 2);
+    }
+
+    // Sol
+    g.fillStyle(0x253a18);
+    g.fillRect(0, h * 0.48, w, h * 0.52);
+    g.fillStyle(0x304a22);
+    g.fillRect(0, h * 0.48, w, h * 0.07);
+
+    // Chemin en terre (trapèze qui s'élargit vers le bas)
+    g.fillStyle(0x9a7a50);
+    g.beginPath();
+    g.moveTo(w * 0.26, h * 0.48);
+    g.lineTo(w * 0.83, h * 0.48);
+    g.lineTo(w * 0.96, h);
+    g.lineTo(w * 0.07, h);
+    g.closePath();
+    g.fillPath();
+    // Texture chemin
+    g.fillStyle(0x8a6a40);
+    for (let i = 0; i < 6; i++) {
+        g.fillRect(w * 0.32 + i * w * 0.1, h * 0.62 + i * h * 0.04, 18, 5);
+    }
+
+    // ---- MAISON (gauche) ----
+    // Murs
+    g.fillStyle(0x8a7a68);
+    g.fillRect(18, h * 0.27, w * 0.27, h * 0.26);
+    // Motif pierre
+    g.lineStyle(1, 0x6a5a48);
+    for (let row = 0; row < 5; row++) {
+        const ry = h * 0.27 + row * h * 0.052;
+        g.lineBetween(18, ry, 18 + w * 0.27, ry);
+        for (let col = 0; col < 5; col++) {
+            const rx = 18 + col * w * 0.054 + (row % 2 === 0 ? 0 : w * 0.027);
+            g.lineBetween(rx, ry, rx, ry + h * 0.052);
+        }
+    }
+    // Toit
+    g.fillStyle(0x5a3820);
+    g.beginPath();
+    g.moveTo(8, h * 0.27);
+    g.lineTo(18 + w * 0.27 + 10, h * 0.27);
+    g.lineTo(18 + w * 0.135, h * 0.11);
+    g.closePath();
+    g.fillPath();
+    // Cheminée
+    g.fillStyle(0x7a6858);
+    g.fillRect(18 + w * 0.165, h * 0.12, 18, h * 0.16);
+    // Fumée
+    for (let i = 0; i < 4; i++) {
+        const sx = 27 + w * 0.165 + Math.sin(t * 0.04 + i * 1.4) * 8;
+        const sy = h * 0.11 - i * 16;
+        const a = 0.55 - i * 0.12;
+        g.fillStyle(0xbbbbbb, a);
+        g.fillCircle(sx, sy, 7 + i * 4);
+    }
+    // Porte
+    g.fillStyle(0x4a2a0a);
+    g.fillRect(18 + w * 0.1, h * 0.42, 22, h * 0.12);
+    g.fillCircle(18 + w * 0.1 + 11, h * 0.42, 11);
+    // Fenêtre gauche
+    g.fillStyle(0xffffcc, 0.85);
+    g.fillRect(26, h * 0.32, 22, 18);
+    g.lineStyle(2, 0x4a2a0a);
+    g.strokeRect(26, h * 0.32, 22, 18);
+    g.lineBetween(37, h * 0.32, 37, h * 0.32 + 18);
+    // Fenêtre droite
+    g.fillStyle(0xffffcc, 0.85);
+    g.fillRect(18 + w * 0.155, h * 0.32, 22, 18);
+    g.lineStyle(2, 0x4a2a0a);
+    g.strokeRect(18 + w * 0.155, h * 0.32, 22, 18);
+    g.lineBetween(18 + w * 0.155 + 11, h * 0.32, 18 + w * 0.155 + 11, h * 0.32 + 18);
+
+    // ---- BIBLIOTHÈQUE (droite) ----
+    const lx = w * 0.68;
+    const lw = w * 0.31;
+    g.fillStyle(0x8a7a68);
+    g.fillRect(lx, h * 0.18, lw, h * 0.35);
+    // Fronton triangulaire
+    g.fillStyle(0x7a6a58);
+    g.fillRect(lx - 8, h * 0.15, lw + 16, h * 0.04);
+    g.beginPath();
+    g.moveTo(lx - 12, h * 0.15);
+    g.lineTo(lx + lw + 12, h * 0.15);
+    g.lineTo(lx + lw / 2, h * 0.07);
+    g.closePath();
+    g.fillPath();
+    // Colonnes
+    g.fillStyle(0xb0a090);
+    for (let i = 0; i < 4; i++) {
+        const cx = lx + 12 + i * (lw / 4 - 1);
+        g.fillRect(cx, h * 0.19, 11, h * 0.34);
+        g.fillStyle(0xc0b0a0);
+        g.fillRect(cx - 3, h * 0.19, 17, 7);
+        g.fillRect(cx - 3, h * 0.19 + h * 0.34 - 7, 17, 7);
+        g.fillStyle(0xb0a090);
+    }
+    // Porte arche
+    g.fillStyle(0x3a2a18);
+    g.fillRect(lx + lw * 0.37, h * 0.37, 26, h * 0.17);
+    g.fillCircle(lx + lw * 0.37 + 13, h * 0.37, 13);
+    // Fenêtres biblio
+    g.fillStyle(0xffffaa, 0.65);
+    g.fillRect(lx + 14, h * 0.24, 18, 20);
+    g.fillRect(lx + lw * 0.65, h * 0.24, 18, 20);
+    g.lineStyle(2, 0x5a4a38);
+    g.strokeRect(lx + 14, h * 0.24, 18, 20);
+    g.strokeRect(lx + lw * 0.65, h * 0.24, 18, 20);
+
+    // ---- ARBRES le long du chemin ----
+    const treeXs = [w * 0.39, w * 0.51, w * 0.63];
+    treeXs.forEach(tx => {
+        const ty = h * 0.47;
+        g.fillStyle(0x4a3828);
+        g.fillRect(tx - 4, ty, 8, 28);
+        g.fillStyle(0x1a4a1a);
+        g.fillCircle(tx, ty - 8, 20);
+        g.fillStyle(0x286028);
+        g.fillCircle(tx - 10, ty - 13, 13);
+        g.fillStyle(0x387038);
+        g.fillCircle(tx + 8, ty - 11, 11);
+    });
+}
+
+export function drawLibraryAisle(g, t, w, h, glowX = -1, glowY = -1) {
+    g.clear();
+
+    // Fond général (bois sombre)
+    g.fillStyle(0x2a1a0a);
+    g.fillRect(0, 0, w, h);
+
+    // Lueur au fond du couloir (point de fuite)
+    const vpX = w * 0.5, vpY = h * 0.42;
+    g.fillStyle(0xffeecc, 0.06 + Math.sin(t * 0.04) * 0.025);
+    g.fillCircle(vpX, vpY, 95);
+
+    // Plafond (trapèze sombre)
+    g.fillStyle(0x120900);
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.lineTo(w, 0);
+    g.lineTo(w * 0.72, h * 0.2);
+    g.lineTo(w * 0.28, h * 0.2);
+    g.closePath();
+    g.fillPath();
+
+    // Sol (trapèze)
+    g.fillStyle(0x3a2008);
+    g.beginPath();
+    g.moveTo(0, h);
+    g.lineTo(w, h);
+    g.lineTo(w * 0.72, h * 0.65);
+    g.lineTo(w * 0.28, h * 0.65);
+    g.closePath();
+    g.fillPath();
+    // Lattes de parquet (lignes convergentes)
+    g.lineStyle(1, 0x2a1506);
+    for (let i = 1; i < 6; i++) {
+        const p = i / 6;
+        const fy = h * 0.65 + (h - h * 0.65) * p;
+        const margin = w * 0.28 * (1 - p);
+        g.lineBetween(margin, fy, w - margin, fy);
+    }
+
+    // ---- ÉTAGÈRE GAUCHE ----
+    const shelfW = w * 0.28;
+    g.fillStyle(0x3a2008);
+    g.fillRect(0, 0, shelfW, h);
+    // Planches horizontales
+    g.fillStyle(0x6a4828);
+    const shelfCount = 5;
+    for (let i = 0; i <= shelfCount; i++) {
+        g.fillRect(0, i * h / shelfCount, shelfW, 5);
+    }
+    // Livres (gauche)
+    const bcolL = [0xaa2222, 0x224488, 0x228833, 0xaa8822, 0x882288, 0xaa5522, 0x226688];
+    for (let shelf = 0; shelf < shelfCount; shelf++) {
+        const sy = shelf * h / shelfCount + 6;
+        const rowH = h / shelfCount - 14;
+        let bx = 2;
+        let bi = shelf * 3;
+        while (bx < shelfW - 4) {
+            const bw = 10 + (bi % 4) * 4;
+            g.fillStyle(bcolL[bi % bcolL.length]);
+            g.fillRect(bx, sy, bw - 1, rowH);
+            bx += bw;
+            bi++;
+        }
+    }
+
+    // ---- ÉTAGÈRE DROITE ----
+    const shelfRx = w * 0.72;
+    g.fillStyle(0x3a2008);
+    g.fillRect(shelfRx, 0, w - shelfRx, h);
+    g.fillStyle(0x6a4828);
+    for (let i = 0; i <= shelfCount; i++) {
+        g.fillRect(shelfRx, i * h / shelfCount, w - shelfRx, 5);
+    }
+    const bcolR = [0x882222, 0x115577, 0x226622, 0x887722, 0x662277, 0x884422, 0x226677];
+    for (let shelf = 0; shelf < shelfCount; shelf++) {
+        const sy = shelf * h / shelfCount + 6;
+        const rowH = h / shelfCount - 14;
+        let bx = shelfRx + 2;
+        let bi = shelf * 4 + 2;
+        while (bx < w - 4) {
+            const bw = 10 + (bi % 4) * 4;
+            g.fillStyle(bcolR[bi % bcolR.length]);
+            g.fillRect(bx, sy, bw - 1, rowH);
+            bx += bw;
+            bi++;
+        }
+    }
+
+    // Lignes de perspective sur les murs
+    g.lineStyle(1, 0x7a5830, 0.4);
+    g.lineBetween(shelfW, 0, vpX, vpY);
+    g.lineBetween(shelfW, h, vpX, vpY);
+    g.lineBetween(shelfRx, 0, vpX, vpY);
+    g.lineBetween(shelfRx, h, vpX, vpY);
+
+    // ---- TORCHES ----
+    for (let i = 0; i < 2; i++) {
+        const tx = i === 0 ? shelfW + 16 : shelfRx - 16;
+        const ty = h * 0.3;
+        const flame = Math.sin(t * 0.22 + i * 2) * 3;
+        g.fillStyle(0x7a5530);
+        g.fillRect(tx - 4, ty, 8, 14);
+        g.fillStyle(0xff5500, 0.85);
+        g.fillCircle(tx, ty - 4 + flame, 9);
+        g.fillStyle(0xffaa00);
+        g.fillCircle(tx, ty - 2 + flame, 5);
+        g.fillStyle(0xffff88);
+        g.fillCircle(tx, ty + flame, 2);
+        // Halo de lumière
+        g.fillStyle(0xffaa44, 0.09);
+        g.fillCircle(tx, ty, 60);
+    }
+
+    // ---- LIVRE QUI BRILLE (phase book_found) ----
+    if (glowX >= 0) {
+        const ga = 0.4 + Math.sin(t * 0.12) * 0.25;
+        g.fillStyle(Colors.gold, ga * 0.35);
+        g.fillCircle(glowX, glowY, 34 + Math.sin(t * 0.1) * 6);
+        g.fillStyle(Colors.gold, ga * 0.65);
+        g.fillCircle(glowX, glowY, 17);
+        // Corps du livre
+        g.fillStyle(0x5a2a1a);
+        g.fillRect(glowX - 11, glowY - 19, 22, 32);
+        g.fillStyle(0x3a1a0a);
+        g.fillRect(glowX - 11, glowY - 19, 4, 32);
+        // Dorures
+        g.fillStyle(Colors.gold, 0.85);
+        g.fillRect(glowX - 6, glowY - 13, 14, 2);
+        g.fillRect(glowX - 6, glowY - 6, 14, 2);
+        g.fillRect(glowX - 6, glowY + 1, 9, 2);
     }
 }
 
