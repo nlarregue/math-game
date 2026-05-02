@@ -2,6 +2,8 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameState } from '../utils/SaveManager';
 import { drawDragon, Colors } from '../utils/Drawing';
+import { EventBus } from '../EventBus';
+import { virtualInput } from '../utils/VirtualInput';
 
 export class Boss extends Scene {
     constructor() {
@@ -14,6 +16,7 @@ export class Boss extends Scene {
         this.W = W; this.H = H;
         this.t = 0;
         this.player = { x: 200, y: H * 0.7 };
+        EventBus.emit('ui-mode', 'boss');
         this.boss = {
             type: 'dragon', hp: 15, maxHp: 15,
             x: W * 0.75, y: H * 0.5,
@@ -142,6 +145,7 @@ export class Boss extends Scene {
         this.generateOp('feu');
         this.combatLayer.setVisible(true);
         this.actionHint.setVisible(false);
+        EventBus.emit('ui-mode', 'combat');
     }
 
     generateOp(spell) {
@@ -211,34 +215,42 @@ export class Boss extends Scene {
     }
 
     handleCombatInput() {
-        if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
+        if (Phaser.Input.Keyboard.JustDown(this.escKey) || virtualInput.escape) {
+            virtualInput.escape = false;
             this.combat = null;
             this.combatLayer.setVisible(false);
             this.actionHint.setVisible(true);
+            EventBus.emit('ui-mode', 'boss');
             return;
         }
         if (!this.combat.op) return;
-        if (Phaser.Input.Keyboard.JustDown(this.enterKey)) {
+        if (Phaser.Input.Keyboard.JustDown(this.enterKey) || virtualInput.enter) {
+            virtualInput.enter = false;
             this.submitAnswer();
             return;
         }
-        if (Phaser.Input.Keyboard.JustDown(this.backspaceKey)) {
+        if (Phaser.Input.Keyboard.JustDown(this.backspaceKey) || virtualInput.backspace) {
+            virtualInput.backspace = false;
             this.combat.input = this.combat.input.slice(0, -1);
             return;
         }
         for (let i = 0; i <= 9; i++) {
-            if (Phaser.Input.Keyboard.JustDown(this.numKeys[i])) {
+            if (Phaser.Input.Keyboard.JustDown(this.numKeys[i]) || virtualInput.digit === String(i)) {
+                if (virtualInput.digit === String(i)) virtualInput.digit = null;
                 if (this.combat.input.length < 3) {
                     this.combat.input += i.toString();
                 }
                 return;
             }
         }
-        if (Phaser.Input.Keyboard.JustDown(this.spellHotkeys.feu) && gameState.data.spells.includes('feu')) {
+        if ((Phaser.Input.Keyboard.JustDown(this.spellHotkeys.feu) || virtualInput.spell === 'feu') && gameState.data.spells.includes('feu')) {
+            if (virtualInput.spell === 'feu') virtualInput.spell = null;
             this.combat.spell = 'feu'; this.generateOp('feu');
-        } else if (Phaser.Input.Keyboard.JustDown(this.spellHotkeys.glace) && gameState.data.spells.includes('glace')) {
+        } else if ((Phaser.Input.Keyboard.JustDown(this.spellHotkeys.glace) || virtualInput.spell === 'glace') && gameState.data.spells.includes('glace')) {
+            if (virtualInput.spell === 'glace') virtualInput.spell = null;
             this.combat.spell = 'glace'; this.generateOp('glace');
-        } else if (Phaser.Input.Keyboard.JustDown(this.spellHotkeys.foudre) && gameState.data.spells.includes('foudre')) {
+        } else if ((Phaser.Input.Keyboard.JustDown(this.spellHotkeys.foudre) || virtualInput.spell === 'foudre') && gameState.data.spells.includes('foudre')) {
+            if (virtualInput.spell === 'foudre') virtualInput.spell = null;
             this.combat.spell = 'foudre'; this.generateOp('foudre');
         }
     }
@@ -375,7 +387,8 @@ export class Boss extends Scene {
             if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-idle') {
                 this.wizardSprite.play('wizard-idle');
             }
-            if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+            if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || virtualInput.space) {
+                virtualInput.space = false;
                 this.startCombat();
             }
         }

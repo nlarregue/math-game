@@ -1,22 +1,35 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PhaserGame } from './PhaserGame';
 import { gameState, SaveManager } from './game/utils/SaveManager';
+import { VirtualControls } from './VirtualControls';
+import { EventBus } from './game/EventBus';
 
 function App() {
     const phaserRef = useRef();
     const [resetMsg, setResetMsg] = useState('');
+    const [spells, setSpells] = useState(gameState.data.spells ?? ['feu']);
+
+    // Met à jour la liste des sorts quand le mode de jeu change
+    // (les sorts débloqués sont dans gameState au moment du changement de scène)
+    useEffect(() => {
+        const handler = () => setSpells([...gameState.data.spells]);
+        EventBus.on('ui-mode', handler);
+        return () => EventBus.off('ui-mode', handler);
+    }, []);
 
     const handleReset = () => {
         if (!window.confirm('Vraiment recommencer depuis le début ? La sauvegarde sera effacée.')) return;
         gameState.reset();
         SaveManager.reset();
-        // Recharger la page pour repartir proprement
         window.location.reload();
     };
 
     return (
         <div id="app">
-            <PhaserGame ref={phaserRef} />
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+                <PhaserGame ref={phaserRef} />
+                <VirtualControls spells={spells} />
+            </div>
             <div className="side-panel">
                 <h2>Le Grimoire Sacré</h2>
                 <p className="info">L'aventure d'Eldrin le Sorcier</p>
@@ -25,7 +38,7 @@ function App() {
                 </button>
                 {resetMsg && <p className="info">{resetMsg}</p>}
                 <div className="controls">
-                    <h3>Contrôles</h3>
+                    <h3>Contrôles clavier</h3>
                     <ul>
                         <li><b>Flèches</b> : se déplacer</li>
                         <li><b>Espace</b> : action / combat</li>

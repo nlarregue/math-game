@@ -2,6 +2,8 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameState } from '../utils/SaveManager';
 import { Colors } from '../utils/Drawing';
+import { EventBus } from '../EventBus';
+import { virtualInput } from '../utils/VirtualInput';
 
 export class Hub extends Scene {
     constructor() {
@@ -13,6 +15,7 @@ export class Hub extends Scene {
         const H = this.scale.height;
         this.W = W; this.H = H;
         this.t = 0;
+        EventBus.emit('ui-mode', 'hub');
 
         this.player = { x: W / 2, y: H * 0.75 };
 
@@ -179,10 +182,10 @@ export class Hub extends Scene {
         // Mouvement
         const sp = 3;
         let moved = false;
-        if (this.cursors.left.isDown)  { this.player.x -= sp; this.playerFacingRight = false; moved = true; }
-        if (this.cursors.right.isDown) { this.player.x += sp; this.playerFacingRight = true;  moved = true; }
-        if (this.cursors.up.isDown)    { this.player.y -= sp; moved = true; }
-        if (this.cursors.down.isDown)  { this.player.y += sp; moved = true; }
+        if (this.cursors.left.isDown  || virtualInput.left)  { this.player.x -= sp; this.playerFacingRight = false; moved = true; }
+        if (this.cursors.right.isDown || virtualInput.right) { this.player.x += sp; this.playerFacingRight = true;  moved = true; }
+        if (this.cursors.up.isDown    || virtualInput.up)    { this.player.y -= sp; moved = true; }
+        if (this.cursors.down.isDown  || virtualInput.down)  { this.player.y += sp; moved = true; }
         this.player.x = Math.max(20, Math.min(W - 20, this.player.x));
         this.player.y = Math.max(H * 0.3, Math.min(H * 0.95, this.player.y));
 
@@ -237,7 +240,8 @@ export class Hub extends Scene {
         }
 
         // Action
-        if (Phaser.Input.Keyboard.JustDown(this.spaceKey) && this.nearAction) {
+        if ((Phaser.Input.Keyboard.JustDown(this.spaceKey) || virtualInput.space) && this.nearAction) {
+            virtualInput.space = false;
             if (this.nearAction === 'boss') {
                 this.scene.start('Boss');
             } else {

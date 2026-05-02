@@ -2,6 +2,8 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameState } from '../utils/SaveManager';
 import { drawForest, drawLibraryAisle, Colors } from '../utils/Drawing';
+import { EventBus } from '../EventBus';
+import { virtualInput } from '../utils/VirtualInput';
 
 const PHASES = [
     { id: 'title',          duration: null,  text: '' },
@@ -29,6 +31,7 @@ export class Intro extends Scene {
         this.phaseTransitionCooldown = 0;
         this.t = 0;
         this.ending = false;
+        EventBus.emit('ui-mode', 'intro');
 
         // Couches graphiques par ordre de profondeur
         this.bgGraphics   = this.add.graphics().setDepth(0);
@@ -191,7 +194,8 @@ export class Intro extends Scene {
         const phase = PHASES[this.phase];
 
         // Touche Espace
-        if (Phaser.Input.Keyboard.JustDown(this.spaceKey) && this.phaseTransitionCooldown <= 0) {
+        if ((Phaser.Input.Keyboard.JustDown(this.spaceKey) || virtualInput.space) && this.phaseTransitionCooldown <= 0) {
+            virtualInput.space = false;
             this.nextPhase();
             return;
         }

@@ -2,6 +2,8 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameState } from '../utils/SaveManager';
 import { drawEnemy, Colors } from '../utils/Drawing';
+import { EventBus } from '../EventBus';
+import { virtualInput } from '../utils/VirtualInput';
 
 // Types d'ennemis qui ont un vrai sprite (transparent bg)
 const SPRITE_ANIMS = {
@@ -56,6 +58,7 @@ export class Level extends Scene {
         this.combat = null;
         this.player = { x: 100, y: H * 0.8 };
         this.particles = [];
+        EventBus.emit('ui-mode', 'level');
 
         this.add.image(W / 2, H / 2, LEVEL_BG[this.levelKey]).setDisplaySize(W, H).setDepth(0);
         this.enemies = [];
@@ -281,6 +284,7 @@ export class Level extends Scene {
         }
         this.combat = { enemy, spell, op: null, input: '', feedback: '', feedbackTime: 0, locked };
         this.generateOp(spell);
+        EventBus.emit('ui-mode', 'combat');
 
         // Affichage de l'ennemi en combat
         const cfg = SPRITE_ANIMS[enemy.type];
@@ -559,23 +563,28 @@ export class Level extends Scene {
     }
 
     handleCombatInput() {
-        if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
+        if (Phaser.Input.Keyboard.JustDown(this.escKey) || virtualInput.escape) {
+            virtualInput.escape = false;
             this.combat = null;
             this.combatLayer.setVisible(false);
             this.combatEnemySprite.setVisible(false);
+            EventBus.emit('ui-mode', 'level');
             return;
         }
         if (!this.combat.op) return;
-        if (Phaser.Input.Keyboard.JustDown(this.enterKey)) {
+        if (Phaser.Input.Keyboard.JustDown(this.enterKey) || virtualInput.enter) {
+            virtualInput.enter = false;
             this.submitAnswer();
             return;
         }
-        if (Phaser.Input.Keyboard.JustDown(this.backspaceKey)) {
+        if (Phaser.Input.Keyboard.JustDown(this.backspaceKey) || virtualInput.backspace) {
+            virtualInput.backspace = false;
             this.combat.input = this.combat.input.slice(0, -1);
             return;
         }
         for (let i = 0; i <= 9; i++) {
-            if (Phaser.Input.Keyboard.JustDown(this.numKeys[i])) {
+            if (Phaser.Input.Keyboard.JustDown(this.numKeys[i]) || virtualInput.digit === String(i)) {
+                if (virtualInput.digit === String(i)) virtualInput.digit = null;
                 if (this.combat.input.length < 3) {
                     this.combat.input += i.toString();
                 }
@@ -584,13 +593,16 @@ export class Level extends Scene {
         }
         // Changement de sort
         if (this.combat.locked !== 'must_freeze') {
-            if (Phaser.Input.Keyboard.JustDown(this.spellHotkeys.feu) && gameState.data.spells.includes('feu')) {
+            if ((Phaser.Input.Keyboard.JustDown(this.spellHotkeys.feu) || virtualInput.spell === 'feu') && gameState.data.spells.includes('feu')) {
+                if (virtualInput.spell === 'feu') virtualInput.spell = null;
                 this.combat.spell = 'feu'; this.generateOp('feu');
-            } else if (Phaser.Input.Keyboard.JustDown(this.spellHotkeys.foudre) && gameState.data.spells.includes('foudre')) {
+            } else if ((Phaser.Input.Keyboard.JustDown(this.spellHotkeys.foudre) || virtualInput.spell === 'foudre') && gameState.data.spells.includes('foudre')) {
+                if (virtualInput.spell === 'foudre') virtualInput.spell = null;
                 this.combat.spell = 'foudre'; this.generateOp('foudre');
             }
         }
-        if (Phaser.Input.Keyboard.JustDown(this.spellHotkeys.glace) && gameState.data.spells.includes('glace')) {
+        if ((Phaser.Input.Keyboard.JustDown(this.spellHotkeys.glace) || virtualInput.spell === 'glace') && gameState.data.spells.includes('glace')) {
+            if (virtualInput.spell === 'glace') virtualInput.spell = null;
             this.combat.spell = 'glace'; this.generateOp('glace');
         }
     }
@@ -669,10 +681,10 @@ export class Level extends Scene {
             // Mouvement
             const sp = 3;
             let moved = false;
-            if (this.cursors.left.isDown)  { this.player.x -= sp; this.playerFacingRight = false; moved = true; }
-            if (this.cursors.right.isDown) { this.player.x += sp; this.playerFacingRight = true;  moved = true; }
-            if (this.cursors.up.isDown)    { this.player.y -= sp; moved = true; }
-            if (this.cursors.down.isDown)  { this.player.y += sp; moved = true; }
+            if (this.cursors.left.isDown  || virtualInput.left)  { this.player.x -= sp; this.playerFacingRight = false; moved = true; }
+            if (this.cursors.right.isDown || virtualInput.right) { this.player.x += sp; this.playerFacingRight = true;  moved = true; }
+            if (this.cursors.up.isDown    || virtualInput.up)    { this.player.y -= sp; moved = true; }
+            if (this.cursors.down.isDown  || virtualInput.down)  { this.player.y += sp; moved = true; }
             this.player.x = Math.max(20, Math.min(W - 20, this.player.x));
             this.player.y = Math.max(H * 0.3, Math.min(H * 0.95, this.player.y));
 
@@ -685,7 +697,8 @@ export class Level extends Scene {
             const near = this.findNearestEnemy();
             if (near) {
                 this.actionHint.setText('Espace pour combattre').setPosition(near.x, near.y - 50).setVisible(true);
-                if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+                if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || virtualInput.space) {
+                    virtualInput.space = false;
                     this.startCombat(near);
                 }
             } else {
@@ -693,7 +706,8 @@ export class Level extends Scene {
             }
 
             // Retour au hub
-            if (Phaser.Input.Keyboard.JustDown(this.hKey)) {
+            if (Phaser.Input.Keyboard.JustDown(this.hKey) || virtualInput.h) {
+                virtualInput.h = false;
                 this.scene.start('Hub');
                 return;
             }
