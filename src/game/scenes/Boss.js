@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameState } from '../utils/SaveManager';
-import { drawWizard, drawDragon, Colors } from '../utils/Drawing';
+import { drawDragon, Colors } from '../utils/Drawing';
 
 export class Boss extends Scene {
     constructor() {
@@ -24,8 +24,12 @@ export class Boss extends Scene {
 
         this.bgGraphics = this.add.graphics();
         this.dragonGraphics = this.add.graphics();
-        this.wizardGraphics = this.add.graphics();
-        this.particleGraphics = this.add.graphics();
+        this.particleGraphics = this.add.graphics().setDepth(20);
+
+        this.wizardSprite = this.add.sprite(this.player.x, this.player.y, 'wizard-idle')
+            .setScale(0.32)
+            .setDepth(30);
+        this.wizardSprite.play('wizard-idle');
 
         // HP boss
         this.bossHpGraphics = this.add.graphics();
@@ -361,16 +365,23 @@ export class Boss extends Scene {
             this.particleGraphics.fillCircle(p.x, p.y, 3);
         });
 
+        // Wizard sprite
+        this.wizardSprite.setPosition(this.player.x, this.player.y);
+
         if (this.combat) {
             this.handleCombatInput();
             this.drawCombat();
-            drawWizard(this.wizardGraphics, this.player.x, this.player.y, 1, true);
+            if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-attack') {
+                this.wizardSprite.play('wizard-attack');
+            }
             if (this.combat && this.combat.feedbackTime > 0) {
                 this.combat.feedbackTime--;
                 if (this.combat.feedbackTime === 0) this.combat.feedback = '';
             }
         } else {
-            drawWizard(this.wizardGraphics, this.player.x, this.player.y, 1, false);
+            if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-idle') {
+                this.wizardSprite.play('wizard-idle');
+            }
             if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
                 this.startCombat();
             }

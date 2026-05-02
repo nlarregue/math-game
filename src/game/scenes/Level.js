@@ -2,10 +2,18 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameState } from '../utils/SaveManager';
 import {
-    drawWizard, drawEnemy,
+    drawEnemy,
     drawForest, drawCastle, drawMountain,
     Colors
 } from '../utils/Drawing';
+
+// Types d'ennemis qui ont un vrai sprite (transparent bg)
+const SPRITE_ANIMS = {
+    slime:  { key: 'slime',  anim: 'slime-idle', scale: 0.20 },
+    goblin: { key: 'goblin', anim: 'goblin-idle', scale: 0.22 },
+    bat:    { key: 'bat',    anim: 'bat-fly',     scale: 0.26 },
+    orc:    { key: 'orc',   anim: 'orc-idle',    scale: 0.22 },
+};
 
 const ENEMY_DEFS = {
     slime: { flying: false, resistant: false },
@@ -46,9 +54,14 @@ export class Level extends Scene {
 
         this.bgGraphics = this.add.graphics();
         this.enemyGraphicsList = [];
-        this.particleGraphics = this.add.graphics();
-        this.wizardGraphics = this.add.graphics();
+        this.particleGraphics = this.add.graphics().setDepth(20);
         this.uiGraphics = this.add.graphics();
+
+        this.playerFacingRight = true;
+        this.wizardSprite = this.add.sprite(this.player.x, this.player.y, 'wizard-idle')
+            .setScale(0.32)
+            .setDepth(30);
+        this.wizardSprite.play('wizard-idle');
 
         this.spawnEnemies();
 
@@ -120,6 +133,11 @@ export class Level extends Scene {
 
         this.combatEnemyGraphics = this.add.graphics();
 
+        // Sprite affiché en combat pour les ennemis qui ont un vrai sprite
+        this.combatEnemySprite = this.add.sprite(W / 2, H * 0.27, 'slime')
+            .setScale(0.55)
+            .setVisible(false);
+
         this.combatEnemyHpBar = this.add.graphics();
         this.combatEnemyHpText = this.add.text(W / 2, H * 0.37, '', {
             fontFamily: 'sans-serif', fontSize: '12px', color: '#ffffff', fontStyle: 'bold'
@@ -173,7 +191,8 @@ export class Level extends Scene {
         }).setOrigin(0.5);
 
         this.combatLayer.add([
-            overlay, box, this.combatTitle, this.combatEnemyGraphics,
+            overlay, box, this.combatTitle,
+            this.combatEnemyGraphics, this.combatEnemySprite,
             this.combatEnemyHpBar, this.combatEnemyHpText,
             this.warningText, this.resistText, this.spellChoiceLabel,
             ...this.spellButtons.flatMap(b => [b.btnGraphics, b.nameText, b.dmgText]),
@@ -182,7 +201,8 @@ export class Level extends Scene {
     }
 
     spawnEnemies() {
-        // Détruit les anciens graphics
+        // Détruit les anciens sprites/graphics
+        this.enemies.forEach(e => { if (e.sprite) e.sprite.destroy(); });
         this.enemyGraphicsList.forEach(g => g.destroy());
         this.enemyGraphicsList = [];
         this.enemies = [];
@@ -196,23 +216,35 @@ export class Level extends Scene {
             const hp = lvl.hpRange[0] + Math.floor(Math.random() * (lvl.hpRange[1] - lvl.hpRange[0] + 1));
             const flying = def.flying;
             const baseY = flying ? (this.H * 0.36 + Math.random() * this.H * 0.12) : (this.H * 0.65 + Math.random() * this.H * 0.16);
-            this.enemies.push({
+            const ex = this.W * 0.4 + i * (this.W * 0.13) + Math.random() * 30;
+            const enemy = {
                 type, hp, maxHp: hp,
-                x: this.W * 0.4 + i * (this.W * 0.13) + Math.random() * 30,
-                y: baseY, baseY,
+                x: ex, y: baseY, baseY,
                 flash: 0, frozen: 0,
                 flying, resistant: def.resistant,
-                floatPhase: Math.random() * Math.PI * 2
-            });
-            const g = this.add.graphics();
+                floatPhase: Math.random() * Math.PI * 2,
+                sprite: null
+            };
+
+            // Sprite (si disponible) ou graphics procédural
+            const cfg = SPRITE_ANIMS[type];
+            if (cfg) {
+                enemy.sprite = this.add.sprite(ex, baseY, cfg.key)
+                    .setScale(cfg.scale)
+                    .setDepth(10)
+                    .play(cfg.anim);
+            }
+            // Graphics pour les effets (gel, HP bar) et les ennemis sans sprite
+            const g = this.add.graphics().setDepth(15);
             this.enemyGraphicsList.push(g);
+            this.enemies.push(enemy);
         }
 
         // Texte verrou pour volants
         this.enemyLockTexts = this.enemies.map((e) => {
-            return this.add.text(e.x, e.y - 40, '', {
+            return this.add.text(e.x, e.y - 50, '', {
                 fontFamily: 'sans-serif', fontSize: '16px', color: '#7fdbff', fontStyle: 'bold'
-            }).setOrigin(0.5);
+            }).setOrigin(0.5).setDepth(20);
         });
     }
 
@@ -238,6 +270,22 @@ export class Level extends Scene {
         }
         this.combat = { enemy, spell, op: null, input: '', feedback: '', feedbackTime: 0, locked };
         this.generateOp(spell);
+
+        // Affichage de l'ennemi en combat
+        const cfg = SPRITE_ANIMS[enemy.type];
+        if (cfg) {
+            this.combatEnemySprite
+                .setTexture(cfg.key)
+                .setScale(cfg.scale * 2.6)
+                .setPosition(this.W / 2, this.H * 0.27)
+                .play(cfg.anim)
+                .setVisible(true);
+            this.combatEnemyGraphics.setVisible(false);
+        } else {
+            this.combatEnemySprite.setVisible(false);
+            this.combatEnemyGraphics.setVisible(true);
+        }
+
         this.combatLayer.setVisible(true);
     }
 
@@ -291,6 +339,7 @@ export class Level extends Scene {
                 this.addParticles(c.enemy.x, c.enemy.y, Colors.gold, 30);
                 const idx = this.enemies.indexOf(c.enemy);
                 if (idx >= 0) {
+                    if (c.enemy.sprite) { c.enemy.sprite.destroy(); c.enemy.sprite = null; }
                     this.enemyGraphicsList[idx].destroy();
                     this.enemyGraphicsList.splice(idx, 1);
                     this.enemyLockTexts[idx].destroy();
@@ -414,15 +463,20 @@ export class Level extends Scene {
         const c = this.combat;
         const W = this.W, H = this.H;
 
-        // Ennemi en gros
-        this.combatEnemyGraphics.clear();
-        const fakeEnemy = { ...c.enemy, x: W / 2, y: H * 0.28, flash: 0, frozen: c.enemy.frozen };
-        // On scale en redessinant à grande taille (dessin basse résolution centrée)
-        // Solution simple : dessiner directement plus gros via setScale du graphics
-        this.combatEnemyGraphics.x = W / 2;
-        this.combatEnemyGraphics.y = H * 0.28;
-        this.combatEnemyGraphics.setScale(2.5);
-        drawEnemy(this.combatEnemyGraphics, { ...c.enemy, x: 0, y: 0 }, this.t, { showHpBar: false });
+        // Ennemi en gros (sprite ou procédural)
+        if (this.combatEnemySprite.visible) {
+            this.combatEnemyGraphics.clear();
+            // Teinte glace + flash
+            if (c.enemy.frozen > 0) this.combatEnemySprite.setTint(0x7fdbff);
+            else this.combatEnemySprite.clearTint();
+            this.combatEnemySprite.setAlpha(c.enemy.flash > 0 ? 0.4 : 1);
+        } else {
+            this.combatEnemyGraphics.clear();
+            this.combatEnemyGraphics.x = W / 2;
+            this.combatEnemyGraphics.y = H * 0.28;
+            this.combatEnemyGraphics.setScale(2.5);
+            drawEnemy(this.combatEnemyGraphics, { ...c.enemy, x: 0, y: 0 }, this.t, { showHpBar: false });
+        }
 
         // Barre de vie du monstre
         const enemy = c.enemy;
@@ -534,7 +588,7 @@ export class Level extends Scene {
         // Décor
         lvl.drawBg(this.bgGraphics, this.t, W, H);
 
-        // Animation flottante
+        // Animation ennemis
         this.enemies.forEach((e, i) => {
             if (e.flying && e.frozen <= 0) {
                 e.y = e.baseY + Math.sin(this.t * 0.05 + e.floatPhase) * 15;
@@ -542,11 +596,43 @@ export class Level extends Scene {
             if (e.frozen > 0) e.frozen--;
             if (e.flash > 0) e.flash--;
 
-            drawEnemy(this.enemyGraphicsList[i], e, this.t);
-            // Texte verrou
+            const g = this.enemyGraphicsList[i];
+            if (e.sprite) {
+                // Positionnement + effets visuels sur le sprite
+                e.sprite.setPosition(e.x, e.y);
+                e.sprite.setAlpha(e.flash > 0 ? 0.5 : 1);
+                if (e.frozen > 0) e.sprite.setTint(0x7fdbff);
+                else e.sprite.clearTint();
+
+                // Effets overlayés sur le graphics (gel, ombre, barre HP)
+                g.clear();
+                if (e.frozen > 0) {
+                    g.fillStyle(Colors.ice, 0.3);
+                    g.fillCircle(e.x, e.y, 32);
+                    g.lineStyle(2, Colors.ice);
+                    for (let ci = 0; ci < 6; ci++) {
+                        const a = ci * Math.PI / 3;
+                        g.lineBetween(e.x + Math.cos(a) * 18, e.y + Math.sin(a) * 18,
+                                      e.x + Math.cos(a) * 26, e.y + Math.sin(a) * 26);
+                    }
+                }
+                if (e.flying && e.frozen <= 0) {
+                    g.fillStyle(Colors.white, 0.25);
+                    g.fillEllipse(e.x, e.y + 30, 44, 10);
+                }
+                const hw = 34;
+                g.fillStyle(0x440000);
+                g.fillRect(e.x - hw / 2, e.y - 42, hw, 5);
+                g.fillStyle(Colors.red);
+                g.fillRect(e.x - hw / 2, e.y - 42, hw * (e.hp / e.maxHp), 5);
+            } else {
+                drawEnemy(g, e, this.t);
+            }
+
+            // Texte verrou volants
             if (this.enemyLockTexts[i]) {
                 if (e.flying && e.frozen <= 0) {
-                    this.enemyLockTexts[i].setText('❄').setPosition(e.x, e.y - 40);
+                    this.enemyLockTexts[i].setText('❄').setPosition(e.x, e.y - 50);
                 } else {
                     this.enemyLockTexts[i].setText('');
                 }
@@ -556,21 +642,31 @@ export class Level extends Scene {
         this.updateParticles();
         this.drawParticles();
 
+        // Wizard sprite — position et animation
+        this.wizardSprite.setPosition(this.player.x, this.player.y);
+        this.wizardSprite.setFlipX(!this.playerFacingRight);
+
         if (this.combat) {
             this.handleCombatInput();
             this.drawCombat();
-            drawWizard(this.wizardGraphics, this.player.x, this.player.y, 1, true);
+            if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-attack') {
+                this.wizardSprite.play('wizard-attack');
+            }
         } else {
             // Mouvement
             const sp = 3;
-            if (this.cursors.left.isDown) this.player.x -= sp;
-            if (this.cursors.right.isDown) this.player.x += sp;
-            if (this.cursors.up.isDown) this.player.y -= sp;
-            if (this.cursors.down.isDown) this.player.y += sp;
+            let moved = false;
+            if (this.cursors.left.isDown)  { this.player.x -= sp; this.playerFacingRight = false; moved = true; }
+            if (this.cursors.right.isDown) { this.player.x += sp; this.playerFacingRight = true;  moved = true; }
+            if (this.cursors.up.isDown)    { this.player.y -= sp; moved = true; }
+            if (this.cursors.down.isDown)  { this.player.y += sp; moved = true; }
             this.player.x = Math.max(20, Math.min(W - 20, this.player.x));
             this.player.y = Math.max(H * 0.3, Math.min(H * 0.95, this.player.y));
 
-            drawWizard(this.wizardGraphics, this.player.x, this.player.y, 1, false);
+            const animKey = moved ? 'wizard-run' : 'wizard-idle';
+            if (this.wizardSprite.anims.currentAnim?.key !== animKey) {
+                this.wizardSprite.play(animKey);
+            }
 
             // Détection ennemi proche
             const near = this.findNearestEnemy();

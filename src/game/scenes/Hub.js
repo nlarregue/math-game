@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameState } from '../utils/SaveManager';
-import { drawWizard, drawForest, Colors } from '../utils/Drawing';
+import { drawForest, Colors } from '../utils/Drawing';
 
 export class Hub extends Scene {
     constructor() {
@@ -19,8 +19,13 @@ export class Hub extends Scene {
         this.bgGraphics = this.add.graphics();
         this.signGraphics = this.add.graphics();
         this.portalGraphics = this.add.graphics();
-        this.wizardGraphics = this.add.graphics();
         this.uiGraphics = this.add.graphics();
+
+        this.playerFacingRight = true;
+        this.wizardSprite = this.add.sprite(this.player.x, this.player.y, 'wizard-idle')
+            .setScale(0.32)
+            .setDepth(30);
+        this.wizardSprite.play('wizard-idle');
 
         // Titre
         this.titleBg = this.add.graphics();
@@ -173,17 +178,25 @@ export class Hub extends Scene {
 
         // Mouvement
         const sp = 3;
-        if (this.cursors.left.isDown) this.player.x -= sp;
-        if (this.cursors.right.isDown) this.player.x += sp;
-        if (this.cursors.up.isDown) this.player.y -= sp;
-        if (this.cursors.down.isDown) this.player.y += sp;
+        let moved = false;
+        if (this.cursors.left.isDown)  { this.player.x -= sp; this.playerFacingRight = false; moved = true; }
+        if (this.cursors.right.isDown) { this.player.x += sp; this.playerFacingRight = true;  moved = true; }
+        if (this.cursors.up.isDown)    { this.player.y -= sp; moved = true; }
+        if (this.cursors.down.isDown)  { this.player.y += sp; moved = true; }
         this.player.x = Math.max(20, Math.min(W - 20, this.player.x));
         this.player.y = Math.max(H * 0.3, Math.min(H * 0.95, this.player.y));
 
         // Décor
         drawForest(this.bgGraphics, this.t, W, H);
         this.drawSigns();
-        drawWizard(this.wizardGraphics, this.player.x, this.player.y, 1);
+
+        // Wizard sprite
+        this.wizardSprite.setPosition(this.player.x, this.player.y);
+        this.wizardSprite.setFlipX(!this.playerFacingRight);
+        const animKey = moved ? 'wizard-run' : 'wizard-idle';
+        if (this.wizardSprite.anims.currentAnim?.key !== animKey) {
+            this.wizardSprite.play(animKey);
+        }
 
         // Boss disponible
         const allDone = s.levelProgress.foret && s.levelProgress.chateau && s.levelProgress.montagne;

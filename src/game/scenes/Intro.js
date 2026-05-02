@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameState } from '../utils/SaveManager';
-import { drawWizard, drawForest, drawHouseExterior, drawLibraryAisle, Colors } from '../utils/Drawing';
+import { drawForest, drawHouseExterior, drawLibraryAisle, Colors } from '../utils/Drawing';
 
 const PHASES = [
     { id: 'title',          duration: null,  text: '' },
@@ -34,8 +34,13 @@ export class Intro extends Scene {
         this.bgGraphics   = this.add.graphics().setDepth(0);
         this.fgGraphics   = this.add.graphics().setDepth(1);
         this.haloGraphics = this.add.graphics().setDepth(2);
-        this.wizardGraphics = this.add.graphics().setDepth(7);
         this.textBox      = this.add.graphics().setDepth(8);
+
+        this.wizardSprite = this.add.sprite(-999, -999, 'wizard-idle')
+            .setScale(0.32)
+            .setDepth(7)
+            .setVisible(false);
+        this.wizardSprite.play('wizard-idle');
 
         // Texte narratif (boîte en bas)
         this.introText = this.add.text(W / 2, H - 73, '', {
@@ -194,8 +199,8 @@ export class Intro extends Scene {
         // Effacement des couches animées
         this.bgGraphics.clear();
         this.fgGraphics.clear();
-        this.wizardGraphics.clear();
         this.haloGraphics.clear();
+        this.wizardSprite.setVisible(false); // chaque méthode de dessin le réactive si besoin
 
         switch (phase.id) {
             case 'title':          this.drawTitle(); break;
@@ -226,7 +231,8 @@ export class Intro extends Scene {
             this.bgGraphics.fillStyle(0xffffff, a);
             this.bgGraphics.fillRect(sx, sy, i % 6 === 0 ? 3 : 2, i % 6 === 0 ? 3 : 2);
         }
-        drawWizard(this.wizardGraphics, W / 2, H * 0.72, 1.5);
+        this.wizardSprite.setVisible(true).setPosition(W / 2, H * 0.72).setScale(0.32 * 1.5);
+        if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-idle') this.wizardSprite.play('wizard-idle');
     }
 
     drawHouseWalk(progress) {
@@ -240,7 +246,8 @@ export class Intro extends Scene {
 
         const wizX = W * 0.17 + (W * 0.79 - W * 0.17) * ease;
         const wizY = H * 0.69;
-        drawWizard(this.wizardGraphics, wizX, wizY, 1.1, false, this.t);
+        this.wizardSprite.setVisible(true).setPosition(wizX, wizY).setScale(0.32 * 1.1);
+        if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-run') this.wizardSprite.play('wizard-run');
     }
 
     drawLibraryEnter(progress) {
@@ -252,7 +259,8 @@ export class Intro extends Scene {
         const wizX = W * 0.08 + (W * 0.43 - W * 0.08) * ease;
         const wizY = H * 0.7;
         const scale = 0.85 + ease * 0.3;
-        drawWizard(this.wizardGraphics, wizX, wizY, scale, false, this.t);
+        this.wizardSprite.setVisible(true).setPosition(wizX, wizY).setScale(0.32 * scale);
+        if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-run') this.wizardSprite.play('wizard-run');
     }
 
     drawLibraryWalk(progress) {
@@ -261,7 +269,8 @@ export class Intro extends Scene {
 
         const wizX = W * 0.36 + (W * 0.52 - W * 0.36) * progress;
         const scale = 1.1 + progress * 0.1;
-        drawWizard(this.wizardGraphics, wizX, H * 0.7, scale, false, this.t);
+        this.wizardSprite.setVisible(true).setPosition(wizX, H * 0.7).setScale(0.32 * scale);
+        if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-run') this.wizardSprite.play('wizard-run');
     }
 
     drawBookFound(progress) {
@@ -273,7 +282,9 @@ export class Intro extends Scene {
 
         // Le sorcier s'arrête, puis pointe son bâton vers le livre
         const casting = progress > 0.45;
-        drawWizard(this.wizardGraphics, W * 0.44, H * 0.7, 1.2, casting);
+        const wAnim = casting ? 'wizard-attack' : 'wizard-idle';
+        this.wizardSprite.setVisible(true).setPosition(W * 0.44, H * 0.7).setScale(0.32 * 1.2);
+        if (this.wizardSprite.anims.currentAnim?.key !== wAnim) this.wizardSprite.play(wAnim);
 
         // Halo extérieur supplémentaire qui grandit progressivement
         const intensity = Math.min(progress * 2.5, 1);
@@ -349,6 +360,7 @@ export class Intro extends Scene {
         const a = 0.3 + Math.sin(this.t * 0.1) * 0.2;
         this.haloGraphics.fillStyle(Colors.gold, a);
         this.haloGraphics.fillCircle(W / 2, H * 0.76, 52);
-        drawWizard(this.wizardGraphics, W / 2, H * 0.76, 1.3);
+        this.wizardSprite.setVisible(true).setPosition(W / 2, H * 0.76).setScale(0.32 * 1.3);
+        if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-idle') this.wizardSprite.play('wizard-idle');
     }
 }

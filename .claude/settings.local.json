@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -command \"Get-Content 'C:\\\\Users\\\\nicol\\\\.claude\\\\projects\\\\c--Users-nicol-Documents-math-game\\\\70d8503f-141a-423b-a7e2-1b3ae97edfdc.jsonl' | Select-Object -Last 200\")",
+      "PowerShell(Add-Type -AssemblyName System.Drawing; $imgs = @\\('Wizard\\\\Idle.png','Wizard\\\\Run.png','Wizard\\\\Attack1.png','Monsters\\\\slime waterB sheet.png','Monsters\\\\goblin sheet.png','Monsters\\\\skelleton sheet.png','Monsters\\\\Bat_0000_dark.png','Monsters\\\\troll_0000_green.png','Monsters\\\\Werewolf_0004_brown.png','Monsters\\\\wolf_0001_brown.png'\\); foreach \\($f in $imgs\\) { $p = \"c:\\\\Users\\\\nicol\\\\Documents\\\\math-game\\\\public\\\\assets\\\\sprites\\\\$f\"; $img = [System.Drawing.Image]::FromFile\\($p\\); \"$f : $\\($img.Width\\)x$\\($img.Height\\)\"; $img.Dispose\\(\\) })",
+      "Bash(npm run *)"
+    ]
+  }
+}
