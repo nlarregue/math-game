@@ -138,16 +138,15 @@ import { Scene } from 'phaser';
 
 Les sprites sont chargés dans `Preloader.preload()` et les animations créées dans `Preloader.createAnimations()` (une seule fois, globalement). Ils sont ensuite disponibles dans toutes les scènes.
 
-**Sorcier** — frameWidth 231 × frameHeight 190 :
-| Clé texture | Frames | Animation Phaser |
+**Sorcier** — clé texture `wizard-red`, source `public/assets/wizard-red.png` (ligne 5 de `Sprite-0002.png`), frameWidth 32 × frameHeight 32, 12 frames en une seule ligne :
+| Frames | Direction | Animation Phaser |
 |---|---|---|
-| `wizard-idle` | 0–5 | `wizard-idle` (repeat -1) |
-| `wizard-run` | 0–7 | `wizard-run` (repeat -1) |
-| `wizard-attack` | 0–7 | `wizard-attack` (repeat -1) |
-| `wizard-hit` | 0–3 | `wizard-hit` (repeat 0) |
-| `wizard-death` | 0–6 | `wizard-death` (repeat 0) |
+| 0–2 | dos | `wizard-death` (repeat 0, frameRate 6) |
+| 3–5 | gauche + bâton | `wizard-run` / `wizard-attack` (repeat -1) |
+| 6–8 | face (barbe blanche) | `wizard-idle` (repeat -1, frameRate 4) |
+| 9–11 | droite | `wizard-hit` (repeat 0, frameRate 10) |
 
-Scale utilisé : **1.70** dans toutes les scènes (Hub, Level, Boss, Intro). Dans Intro.js les scales sont exprimés sous forme `1.70 * multiplicateur` pour conserver les proportions relatives entre les phases.
+Scale utilisé : **2.5** dans toutes les scènes (Hub, Level, Boss, Intro). Dans Intro.js les scales sont exprimés sous forme `2.5 * multiplicateur` pour conserver les proportions relatives entre les phases.
 
 **Monstres avec fond transparent** (intégrés) :
 | Type jeu | Clé texture | Frame size | Anim idle |
@@ -246,7 +245,7 @@ create() {
     // Fond PNG statique (depth 0, créé en premier) :
     this.add.image(W / 2, H / 2, 'bg-forest').setDisplaySize(W, H).setDepth(0);
     // Sprite chargé en Preloader — disponible directement :
-    this.wizardSprite = this.add.sprite(x, y, 'wizard-idle').setScale(1.70).setDepth(30);
+    this.wizardSprite = this.add.sprite(x, y, 'wizard-red').setScale(5.0).setDepth(30);
     this.wizardSprite.play('wizard-idle');
 }
 
@@ -327,10 +326,10 @@ Voici ce qui ferait sens comme prochains chantiers, par ordre de priorité décr
 - Le projet est sur GitHub : `https://github.com/nlarregue/math-game`
 - L'utilisateur a un fond technique IT (admin Microsoft 365 / Exchange Online) — il comprend les concepts de développement mais n'est pas développeur full-time. Adapter le niveau d'explication en conséquence : technique mais pas jargonneux.
 - Le jeu a été développé pour le fils de l'utilisateur, qui apprécie déjà la version actuelle.
-- Les sprites avec **fond transparent** (utilisables) : Wizard/*, slime waterB sheet, goblin sheet, Bat_0000_dark, kobold_0000_red, vampire-pixel-art-sprite/Converted_Vampire/* (128×128 px/frame), skeleton enemy/Skeleton enemy.png (64×64 px/frame, 13×5).
+- Les sprites avec **fond transparent** (utilisables) : `wizard-red.png` (extrait de `Sprite-0002.png` ligne 5, 32×32), goblin sheet, kobold_0000_red, vampire-pixel-art-sprite/Converted_Vampire/* (128×128 px/frame).
 - Les sprites avec **fond noir opaque** (inutilisables sans traitement) : skelleton sheet, troll_0000_green, gnoll sheet, wolf_0001_brown, Rat_0004_dark. On peut supprimer le fond noir avec PIL : pixels (R<25, G<25, B<25) → alpha=0 (voir traitement de wizard-tower.png).
-- **Images statiques Intro** : `wizard-tower.png` et `fantasy-library2.png` sont dans `public/assets/` (pas dans `sprites/`). Traitement PIL appliqué (suppression fond, rognage, redimensionnement). Pour ajouter d'autres images de décor : même pattern — charger dans Preloader avec `this.load.image()`, créer dans `Intro.create()` avec `.setVisible(false)`, cacher dans `update()` avant les méthodes de dessin, activer uniquement dans la méthode qui en a besoin.
-- Si les scales des sprites semblent trop grands ou trop petits visuellement, ajuster les valeurs dans `SPRITE_ANIMS` (Level.js) et les appels `.setScale()` dans Hub.js / Intro.js / Boss.js. La valeur de base est **1.70** pour le sorcier.
+- **Images statiques Intro** : `wizard-tower.png` et `mystical-house.png` sont dans `public/assets/` (pas dans `sprites/`). Traitement PIL appliqué (suppression fond, rognage, redimensionnement). Pour ajouter d'autres images de décor : même pattern — charger dans Preloader avec `this.load.image()`, créer dans `Intro.create()` avec `.setVisible(false)`, cacher dans `update()` avant les méthodes de dessin, activer uniquement dans la méthode qui en a besoin.
+- Si les scales des sprites semblent trop grands ou trop petits visuellement, ajuster les valeurs dans `SPRITE_ANIMS` (Level.js) et les appels `.setScale()` dans Hub.js / Intro.js / Boss.js. La valeur de base est **2.5** pour le sorcier (sprite 32×32 de `wizard-red.png`).
 - **Bugs connus corrigés** (ne pas réintroduire) :
   - `this.enemies = []` doit être initialisé dans `create()` de Level.js avant l'appel à `spawnEnemies()`, sinon crash au chargement du niveau.
   - `drawCombat()` doit commencer par `if (!this.combat) return` — `handleCombatInput()` peut mettre `this.combat = null` avant que `drawCombat()` soit appelé dans la même frame.

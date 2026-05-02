@@ -29,21 +29,20 @@ export class Preloader extends Scene {
         });
 
         // ── Sorcier ──────────────────────────────────────────────
-        const FW = 231, FH = 190;
-        this.load.spritesheet('wizard-idle',   'assets/sprites/Wizard/Idle.png',    { frameWidth: FW, frameHeight: FH });
-        this.load.spritesheet('wizard-run',    'assets/sprites/Wizard/Run.png',     { frameWidth: FW, frameHeight: FH });
-        this.load.spritesheet('wizard-attack', 'assets/sprites/Wizard/Attack1.png', { frameWidth: FW, frameHeight: FH });
-        this.load.spritesheet('wizard-hit',    'assets/sprites/Wizard/Hit.png',     { frameWidth: FW, frameHeight: FH });
-        this.load.spritesheet('wizard-death',  'assets/sprites/Wizard/Death.png',   { frameWidth: FW, frameHeight: FH });
+        // Ligne 5 de Sprite-0002.png : 12 frames 32×32 (dos, gauche×3, face×3, droite×3)
+        this.load.spritesheet('wizard-red', 'assets/wizard-red.png', { frameWidth: 32, frameHeight: 32 });
 
         // ── Monstres ─────────────────────────────────────────────
-        this.load.spritesheet('slime',   'assets/sprites/Monsters/slime waterB sheet.png', { frameWidth: 300, frameHeight: 270 });
+        this.load.spritesheet('slime',   'assets/sprites/Mystic Rpg FREE/ART/Enemies/Enemies_Green_Slime.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('goblin',  'assets/sprites/Monsters/goblin sheet.png',       { frameWidth: 300, frameHeight: 180 });
-        this.load.spritesheet('bat',     'assets/sprites/Monsters/Bat_0000_dark.png',      { frameWidth: 270, frameHeight: 150 });
+        this.load.spritesheet('bat',   'assets/sprites/RPG-Character/Enemy/Fantome-noir.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('ghost', 'assets/sprites/RPG-Character/Enemy/Fantome-bleu.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('orc',     'assets/sprites/Monsters/kobold_0000_red.png',    { frameWidth: 300, frameHeight: 180 });
+        this.load.spritesheet('bee',      'assets/sprites/Level-Monsters/PNG/Transperent/Icon42.png',           { frameWidth: 32,  frameHeight: 32  });
         this.load.spritesheet('vampire',  'assets/sprites/vampire-pixel-art-sprite/Converted_Vampire/Idle.png', { frameWidth: 128, frameHeight: 128 });
         this.load.spritesheet('vampire-run', 'assets/sprites/vampire-pixel-art-sprite/Converted_Vampire/Run.png', { frameWidth: 128, frameHeight: 128 });
-        this.load.spritesheet('skeleton', 'assets/sprites/Skeleton enemy/Skeleton enemy.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('skeleton',      'assets/sprites/RPG-Character/Enemy/Squelette.png',      { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('skeleton-dark', 'assets/sprites/RPG-Character/Enemy/Squelette-noir.png', { frameWidth: 32, frameHeight: 32 });
 
         // ── Décors ───────────────────────────────────────────────
         this.load.image('wizard-tower',     'assets/wizard-tower.png');
@@ -65,21 +64,25 @@ export class Preloader extends Scene {
     }
 
     createAnimations() {
-        // Sorcier
-        this.anims.create({ key: 'wizard-idle',   frames: this.anims.generateFrameNumbers('wizard-idle',   { start: 0, end: 5 }), frameRate: 8,  repeat: -1 });
-        this.anims.create({ key: 'wizard-run',    frames: this.anims.generateFrameNumbers('wizard-run',    { start: 0, end: 7 }), frameRate: 10, repeat: -1 });
-        this.anims.create({ key: 'wizard-attack', frames: this.anims.generateFrameNumbers('wizard-attack', { start: 0, end: 7 }), frameRate: 12, repeat: -1 });
-        this.anims.create({ key: 'wizard-hit',    frames: this.anims.generateFrameNumbers('wizard-hit',    { start: 0, end: 3 }), frameRate: 10, repeat: 0  });
-        this.anims.create({ key: 'wizard-death',  frames: this.anims.generateFrameNumbers('wizard-death',  { start: 0, end: 6 }), frameRate: 8,  repeat: 0  });
+        // Sorcier (wizard-red.png : 12 frames — 0-2 dos, 3-5 gauche+bâton, 6-8 face, 9-11 droite)
+        this.anims.create({ key: 'wizard-idle',   frames: this.anims.generateFrameNumbers('wizard-red', { start: 6, end: 8 }), frameRate: 4,  repeat: -1 });
+        this.anims.create({ key: 'wizard-run',    frames: this.anims.generateFrameNumbers('wizard-red', { start: 3, end: 5 }), frameRate: 8,  repeat: -1 });
+        this.anims.create({ key: 'wizard-attack', frames: this.anims.generateFrameNumbers('wizard-red', { start: 3, end: 5 }), frameRate: 12, repeat: -1 });
+        this.anims.create({ key: 'wizard-hit',    frames: this.anims.generateFrameNumbers('wizard-red', { start: 9, end: 11 }), frameRate: 10, repeat: 0  });
+        this.anims.create({ key: 'wizard-death',  frames: this.anims.generateFrameNumbers('wizard-red', { start: 0, end: 2  }), frameRate: 6,  repeat: 0  });
 
-        // Slime : 9 frames/ligne × 3 lignes → ligne 0 = idle
-        this.anims.create({ key: 'slime-idle', frames: this.anims.generateFrameNumbers('slime', { start: 0, end: 8 }), frameRate: 8, repeat: -1 });
+        // Slime : 16×16 px/frame, 5 cols × 4 rows — rangée 0 (frames 0-4) = idle
+        this.anims.create({ key: 'slime-idle', frames: this.anims.generateFrameNumbers('slime', { start: 0, end: 4 }), frameRate: 6, repeat: -1 });
+
+        // Abeille : 1 frame statique
+        this.anims.create({ key: 'bee-fly', frames: this.anims.generateFrameNumbers('bee', { start: 0, end: 0 }), frameRate: 1, repeat: -1 });
 
         // Goblin : 9 frames/ligne × 5 lignes → ligne 0 = idle, ligne 1 = walk
         this.anims.create({ key: 'goblin-idle', frames: this.anims.generateFrameNumbers('goblin', { start: 0, end: 8 }), frameRate: 8, repeat: -1 });
 
-        // Chauve-souris : 5 frames/ligne × 6 lignes → ligne 0 = vol
-        this.anims.create({ key: 'bat-fly', frames: this.anims.generateFrameNumbers('bat', { start: 0, end: 4 }), frameRate: 10, repeat: -1 });
+        // Fantômes (remplacent les chauves-souris) : 32×32, rangée 1 (frames 3-5, face gauche)
+        this.anims.create({ key: 'bat-fly',   frames: this.anims.generateFrameNumbers('bat',   { start: 3, end: 5 }), frameRate: 5, repeat: -1 });
+        this.anims.create({ key: 'ghost-fly', frames: this.anims.generateFrameNumbers('ghost', { start: 3, end: 5 }), frameRate: 5, repeat: -1 });
 
         // Orc (kobold) : 9 frames/ligne × 6 lignes → ligne 0 = idle
         this.anims.create({ key: 'orc-idle', frames: this.anims.generateFrameNumbers('orc', { start: 0, end: 8 }), frameRate: 8, repeat: -1 });
@@ -88,13 +91,8 @@ export class Preloader extends Scene {
         this.anims.create({ key: 'vampire-idle', frames: this.anims.generateFrameNumbers('vampire',     { start: 0, end: 4 }), frameRate: 8,  repeat: -1 });
         this.anims.create({ key: 'vampire-run',  frames: this.anims.generateFrameNumbers('vampire-run', { start: 0, end: 7 }), frameRate: 10, repeat: -1 });
 
-        // Skeleton : 64×64 px/frame, 13 cols × 5 rows — rangée 0 (frames 0-12)
-        const skeletonTex = this.textures.get('skeleton');
-        const skeletonFrames = skeletonTex ? skeletonTex.frameTotal : 0;
-        if (skeletonFrames > 12) {
-            this.anims.create({ key: 'skeleton-idle', frames: this.anims.generateFrameNumbers('skeleton', { start: 0, end: 12 }), frameRate: 8, repeat: -1 });
-        } else {
-            console.warn('[Preloader] skeleton texture frames insuffisants:', skeletonFrames, '(attendu > 12)');
-        }
+        // Squelettes : 32×32, 3 cols × 4 rows — rangée 1 (frames 3-5, face gauche)
+        this.anims.create({ key: 'skeleton-idle',      frames: this.anims.generateFrameNumbers('skeleton',      { start: 3, end: 5 }), frameRate: 6, repeat: -1 });
+        this.anims.create({ key: 'skeleton-dark-idle', frames: this.anims.generateFrameNumbers('skeleton-dark', { start: 3, end: 5 }), frameRate: 6, repeat: -1 });
     }
 }

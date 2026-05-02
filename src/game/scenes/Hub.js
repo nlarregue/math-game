@@ -22,8 +22,8 @@ export class Hub extends Scene {
         this.uiGraphics = this.add.graphics();
 
         this.playerFacingRight = true;
-        this.wizardSprite = this.add.sprite(this.player.x, this.player.y, 'wizard-idle')
-            .setScale(1.70)
+        this.wizardSprite = this.add.sprite(this.player.x, this.player.y, 'wizard-red')
+            .setScale(2.5)
             .setDepth(30);
         this.wizardSprite.play('wizard-idle');
 

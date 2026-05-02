@@ -5,22 +5,27 @@ import { drawEnemy, Colors } from '../utils/Drawing';
 
 // Types d'ennemis qui ont un vrai sprite (transparent bg)
 const SPRITE_ANIMS = {
-    slime:   { key: 'slime',   anim: 'slime-idle',   scale: 0.40 },
-    goblin:  { key: 'goblin',  anim: 'goblin-idle',  scale: 0.22 },
-    bat:     { key: 'bat',     anim: 'bat-fly',      scale: 0.26 },
-    orc:     { key: 'orc',     anim: 'orc-idle',     scale: 0.22 },
-    vampire:  { key: 'vampire',  anim: 'vampire-idle',  scale: 2.52, combatScale: 1.2 },
-    skeleton: { key: 'skeleton', anim: 'skeleton-idle', scale: 1.0,  combatScale: 2.0 },
+    slime:          { key: 'slime',         anim: 'slime-idle',         scale: 4.0,  combatScale: 6.0 },
+    bird:           { key: 'bee',           anim: 'bee-fly',            scale: 2.0,  combatScale: 3.5 },
+    goblin:         { key: 'goblin',        anim: 'goblin-idle',        scale: 0.22 },
+    bat:            { key: 'bat',           anim: 'bat-fly',            scale: 2.5,  combatScale: 4.0 },
+    ghost:          { key: 'ghost',         anim: 'ghost-fly',          scale: 2.5,  combatScale: 4.0 },
+    orc:            { key: 'orc',           anim: 'orc-idle',           scale: 0.22 },
+    vampire:        { key: 'vampire',       anim: 'vampire-idle',       scale: 2.52, combatScale: 1.2 },
+    skeleton:       { key: 'skeleton',      anim: 'skeleton-idle',      scale: 2.5,  combatScale: 4.0 },
+    'skeleton-dark':{ key: 'skeleton-dark', anim: 'skeleton-dark-idle', scale: 2.5,  combatScale: 4.0 },
 };
 
 const ENEMY_DEFS = {
-    slime: { flying: false, resistant: false },
-    bird: { flying: true, resistant: false },
-    skeleton: { flying: false, resistant: false },
-    bat: { flying: true, resistant: false },
-    vampire: { flying: false, resistant: false },
-    orc: { flying: false, resistant: true },
-    goblin: { flying: false, resistant: true }
+    slime:          { flying: false, resistant: false },
+    bird:           { flying: true,  resistant: false },
+    skeleton:       { flying: false, resistant: false },
+    'skeleton-dark':{ flying: false, resistant: false },
+    bat:            { flying: true,  resistant: false },
+    ghost:          { flying: true,  resistant: false },
+    vampire:        { flying: false, resistant: false },
+    orc:            { flying: false, resistant: true  },
+    goblin:         { flying: false, resistant: true  }
 };
 
 const LEVEL_BG = { foret: 'bg-forest', chateau: 'bg-chateau', montagne: 'bg-montagne' };
@@ -29,7 +34,7 @@ const LEVELS = {
     foret:    { hpRange: [1, 2], killGoal: 10,
         getTypes: () => gameState.data.spells.includes('glace') ? ['slime', 'bird', 'slime'] : ['slime'] },
     chateau:  { hpRange: [3, 4], killGoal: 10,
-        getTypes: () => gameState.data.spells.includes('glace') ? ['skeleton', 'bat', 'vampire'] : ['skeleton', 'vampire'] },
+        getTypes: () => gameState.data.spells.includes('glace') ? ['skeleton', 'skeleton-dark', 'bat', 'ghost', 'vampire'] : ['skeleton', 'skeleton-dark', 'vampire'] },
     montagne: { hpRange: [5, 6], killGoal: 10,
         getTypes: () => ['orc', 'goblin'] }
 };
@@ -59,8 +64,8 @@ export class Level extends Scene {
         this.uiGraphics = this.add.graphics();
 
         this.playerFacingRight = true;
-        this.wizardSprite = this.add.sprite(this.player.x, this.player.y, 'wizard-idle')
-            .setScale(1.70)
+        this.wizardSprite = this.add.sprite(this.player.x, this.player.y, 'wizard-red')
+            .setScale(2.5)
             .setDepth(30);
         this.wizardSprite.play('wizard-idle');
 
@@ -633,8 +638,7 @@ export class Level extends Scene {
                 g.fillStyle(Colors.red);
                 g.fillRect(e.x - hw / 2, e.y - 42, hw * (e.hp / e.maxHp), 5);
             } else {
-                const ds = e.type === 'bird' ? 2 : 1;
-                g.setPosition(e.x, e.y).setScale(ds);
+                g.setPosition(e.x, e.y).setScale(1);
                 drawEnemy(g, { ...e, x: 0, y: 0 }, this.t);
             }
 

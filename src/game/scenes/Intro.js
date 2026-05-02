@@ -36,8 +36,8 @@ export class Intro extends Scene {
         this.haloGraphics = this.add.graphics().setDepth(2);
         this.textBox      = this.add.graphics().setDepth(8);
 
-        this.wizardSprite = this.add.sprite(-999, -999, 'wizard-idle')
-            .setScale(1.70)
+        this.wizardSprite = this.add.sprite(-999, -999, 'wizard-red')
+            .setScale(2.5)
             .setDepth(7)
             .setVisible(false);
         this.wizardSprite.play('wizard-idle');
@@ -244,7 +244,7 @@ export class Intro extends Scene {
             this.bgGraphics.fillStyle(0xffffff, a);
             this.bgGraphics.fillRect(sx, sy, i % 6 === 0 ? 3 : 2, i % 6 === 0 ? 3 : 2);
         }
-        this.wizardSprite.setVisible(true).setPosition(W / 2, H * 0.72).setScale(1.70 * 1.5);
+        this.wizardSprite.setVisible(true).setPosition(W / 2, H * 0.72).setScale(2.5 *1.5);
         if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-idle') this.wizardSprite.play('wizard-idle');
     }
 
@@ -272,7 +272,7 @@ export class Intro extends Scene {
             ? 2 * progress * progress
             : 1 - Math.pow(-2 * progress + 2, 2) / 2;
         const wizX = W * 0.17 + (W * 0.82 - W * 0.17) * ease;
-        this.wizardSprite.setVisible(true).setPosition(wizX, H * 0.69).setScale(1.70 * 1.1);
+        this.wizardSprite.setVisible(true).setPosition(wizX, H * 0.69).setScale(2.5 *1.1);
         if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-run') this.wizardSprite.play('wizard-run');
     }
 
@@ -296,7 +296,7 @@ export class Intro extends Scene {
         // Sorcier qui s'approche, décélère en arrivant devant l'entrée
         const ease = 1 - Math.pow(1 - progress, 2);
         const wizX = W * 0.08 + (W * 0.57 - W * 0.08) * ease;
-        this.wizardSprite.setVisible(true).setPosition(wizX, H * 0.69).setScale(1.70 * 1.1);
+        this.wizardSprite.setVisible(true).setPosition(wizX, H * 0.69).setScale(2.5 *1.1);
         if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-run') this.wizardSprite.play('wizard-run');
     }
 
@@ -306,7 +306,7 @@ export class Intro extends Scene {
 
         const wizX = W * 0.36 + (W * 0.52 - W * 0.36) * progress;
         const scale = 1.1 + progress * 0.1;
-        this.wizardSprite.setVisible(true).setPosition(wizX, H * 0.7).setScale(1.70 * scale);
+        this.wizardSprite.setVisible(true).setPosition(wizX, H * 0.7).setScale(2.5 *scale);
         if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-run') this.wizardSprite.play('wizard-run');
     }
 
@@ -320,7 +320,7 @@ export class Intro extends Scene {
         // Le sorcier s'arrête, puis pointe son bâton vers le livre
         const casting = progress > 0.45;
         const wAnim = casting ? 'wizard-attack' : 'wizard-idle';
-        this.wizardSprite.setVisible(true).setPosition(W * 0.44, H * 0.7).setScale(1.70 * 1.2);
+        this.wizardSprite.setVisible(true).setPosition(W * 0.44, H * 0.7).setScale(2.5 *1.2);
         if (this.wizardSprite.anims.currentAnim?.key !== wAnim) this.wizardSprite.play(wAnim);
 
         // Halo extérieur supplémentaire qui grandit progressivement
@@ -397,7 +397,7 @@ export class Intro extends Scene {
         const a = 0.3 + Math.sin(this.t * 0.1) * 0.2;
         this.haloGraphics.fillStyle(Colors.gold, a);
         this.haloGraphics.fillCircle(W / 2, H * 0.76, 52);
-        this.wizardSprite.setVisible(true).setPosition(W / 2, H * 0.76).setScale(1.70 * 1.3);
+        this.wizardSprite.setVisible(true).setPosition(W / 2, H * 0.76).setScale(2.5 *1.3);
         if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-idle') this.wizardSprite.play('wizard-idle');
     }
 }
