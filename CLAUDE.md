@@ -80,7 +80,8 @@ public/
   style.css                 # Style de l'interface React
   assets/
     wizard-tower.png        # Tour du sorcier (280×600, fond transparent) — phase house_walk de l'intro
-    fantasy-library2.png    # Bâtiment bibliothèque (215×456, fond transparent) — phase library_enter de l'intro
+    mystical-house.png      # Bâtiment bibliothèque (520×540, fond transparent) — phase library_enter de l'intro
+    fantasy-library2.png    # Ancienne version (peut être supprimée)
     Fantasy-library.png     # Source originale avec les 3 modèles (ne pas charger dans le jeu)
     sprites/
       Wizard/               # Idle.png Run.png Attack1.png Attack2.png Hit.png Death.png Jump.png Fall.png
