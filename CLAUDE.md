@@ -8,7 +8,9 @@ Jeu vidéo 2D éducatif en français, développé pour un enfant de 9 ans, desti
 
 **Stack** : Phaser 4 + React 19 + Vite (basé sur le template officiel `phaserjs/template-react`).
 
-**Statut actuel** : version fonctionnelle avec toutes les mécaniques de base. Tout est dessiné procéduralement avec `Phaser.GameObjects.Graphics` — aucun sprite externe n'est chargé. Le build de production passe (`npm run build-nolog`).
+**Statut actuel** : version fonctionnelle avec toutes les mécaniques de base. Le build de production passe (`npm run build`).
+
+Les personnages et certains monstres utilisent désormais de vrais sprites PNG animés. Les décors restent procéduraux (`Phaser.GameObjects.Graphics`). Les deux coexistent sans problème.
 
 ## Histoire
 
@@ -48,21 +50,28 @@ src/
   PhaserGame.jsx            # Composant qui héberge le canvas Phaser
   main.jsx                  # Entry point React
   game/
-    main.js                 # Config Phaser, liste des scènes
+    main.js                 # Config Phaser, liste des scènes (canvas 1024×768)
     EventBus.js             # (présent mais non utilisé actuellement)
     scenes/
       Boot.js               # Démarre Preloader
-      Preloader.js          # Route vers Intro ou Hub selon la sauvegarde
-      Intro.js              # Séquence narrative en 6 étapes
+      Preloader.js          # Charge les sprites (preload) + crée les animations, puis route vers Intro ou Hub
+      Intro.js              # Séquence narrative en 8 phases
       Hub.js                # Carte centrale avec 3 panneaux + portail boss
       Level.js              # Niveau de jeu (forêt/château/montagne) — la pièce maîtresse
       Boss.js               # Combat de boss final
       GameOver.js           # Contient les classes GameOver ET Victory
     utils/
       SaveManager.js        # localStorage + singleton gameState
-      Drawing.js             # Toutes les fonctions de dessin Graphics
+      Drawing.js            # Fonctions de dessin procédural (décors, dragon, ennemis sans sprite)
 public/
   style.css                 # Style de l'interface React
+  assets/sprites/
+    Wizard/                 # Idle.png Run.png Attack1.png Attack2.png Hit.png Death.png Jump.png Fall.png
+    Monsters/               # slime waterB sheet.png  goblin sheet.png  Bat_0000_dark.png
+                            # kobold_0000_red.png (utilisé comme "orc")  skelleton sheet.png (fond noir, inutilisé)
+                            # troll_0000_green.png  gnoll sheet.png  wolf_0001_brown.png  (fonds noirs, inutilisés)
+                            # Werewolf_0004_brown.png  Zombies/  German shepard bundle/
+    Pixel-Art-Battlegrounds/ # Fonds de combat (non intégrés)
 ```
 
 ## État partagé entre scènes
@@ -98,15 +107,68 @@ import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 ```
 
-### Dessin procédural
-Tout le rendu visuel passe par `Phaser.GameObjects.Graphics`. Les fonctions de dessin se trouvent dans `Drawing.js` et prennent un objet `Graphics` en premier paramètre :
+### Sprites animés
+
+Les sprites sont chargés dans `Preloader.preload()` et les animations créées dans `Preloader.createAnimations()` (une seule fois, globalement). Ils sont ensuite disponibles dans toutes les scènes.
+
+**Sorcier** — frameWidth 231 × frameHeight 190 :
+| Clé texture | Frames | Animation Phaser |
+|---|---|---|
+| `wizard-idle` | 0–5 | `wizard-idle` (repeat -1) |
+| `wizard-run` | 0–7 | `wizard-run` (repeat -1) |
+| `wizard-attack` | 0–7 | `wizard-attack` (repeat -1) |
+| `wizard-hit` | 0–3 | `wizard-hit` (repeat 0) |
+| `wizard-death` | 0–6 | `wizard-death` (repeat 0) |
+
+Scale utilisé : **0.32** dans toutes les scènes (le sprite occupe environ 50-60 px de haut à l'écran).
+
+**Monstres avec fond transparent** (intégrés) :
+| Type jeu | Clé texture | Frame size | Anim idle |
+|---|---|---|---|
+| `slime` | `slime` | 300×270 | `slime-idle` (frames 0–8) |
+| `goblin` | `goblin` | 300×180 | `goblin-idle` (frames 0–8) |
+| `bat` | `bat` | 270×150 | `bat-fly` (frames 0–4) |
+| `orc` | `orc` | 300×180 | `orc-idle` (frames 0–8) |
+
+Le kobold (`kobold_0000_red.png`) est utilisé comme visuel pour le type `orc`.
+
+**Monstres restés procéduraux** (leur sheet PNG a un fond noir opaque, pas de transparence) :
+`skeleton`, `vampire`, `bird` → dessinés via `drawEnemy()` de `Drawing.js`.
+
+**`SPRITE_ANIMS`** (dans `Level.js`) — map type→config :
+```js
+const SPRITE_ANIMS = {
+    slime:  { key: 'slime',  anim: 'slime-idle', scale: 0.20 },
+    goblin: { key: 'goblin', anim: 'goblin-idle', scale: 0.22 },
+    bat:    { key: 'bat',    anim: 'bat-fly',     scale: 0.26 },
+    orc:    { key: 'orc',   anim: 'orc-idle',    scale: 0.22 },
+};
+```
+
+Si un type est absent de cette map, `drawEnemy()` Graphics est utilisé en fallback.
+
+### Rendu mixte sprite + Graphics
+
+Pour les ennemis avec sprite :
+- Le **sprite** gère le visuel du personnage (`setPosition`, `setAlpha`, `setTint`)
+- Un objet **Graphics** dédié (dans `enemyGraphicsList`) gère les overlays : aura de gel, HP bar, ombre des volants
+
+Pour l'écran de combat (`combatLayer`) :
+- `this.combatEnemySprite` : sprite du monstre (montré si l'ennemi a un sprite)
+- `this.combatEnemyGraphics` : rendu procédural (fallback pour skeleton/vampire/bird)
+- `startCombat()` bascule entre les deux avec `setVisible()`
+
+### Dessin procédural (décors et ennemis sans sprite)
+Les fonctions de `Drawing.js` prennent un objet `Graphics` en premier paramètre :
 
 ```js
-drawWizard(graphics, x, y, scale, casting)
-drawSlime(graphics, x, y)
+drawEnemy(graphics, enemy, t, options)   // skeleton, vampire, bird
 drawDragon(graphics, x, y, t)
 drawForest(graphics, t, w, h)
-drawEnemy(graphics, enemy, t, options)
+drawCastle(graphics, t, w, h)
+drawMountain(graphics, t, w, h)
+drawHouseExterior(graphics, t, w, h)
+drawLibraryAisle(graphics, t, w, h, glowX, glowY)
 ```
 
 Les couleurs sont exportées dans `Colors` (format hex Phaser : `0xff6b35` etc.).
@@ -116,14 +178,20 @@ Les couleurs sont exportées dans `Colors` (format hex Phaser : `0xff6b35` etc.)
 create() {
     this.t = 0;
     this.bgGraphics = this.add.graphics();
-    // ...
+    // Sprite chargé en Preloader — disponible directement :
+    this.wizardSprite = this.add.sprite(x, y, 'wizard-idle').setScale(0.32).setDepth(30);
+    this.wizardSprite.play('wizard-idle');
 }
 
 update(time, delta) {
     this.t += delta / 16.67;  // Compteur de frames à 60fps
     this.bgGraphics.clear();
     drawForest(this.bgGraphics, this.t, this.W, this.H);
-    // ...
+    // Mise à jour sprite :
+    this.wizardSprite.setPosition(this.player.x, this.player.y);
+    if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-idle') {
+        this.wizardSprite.play('wizard-idle');
+    }
 }
 ```
 
@@ -166,17 +234,19 @@ npm run build        # build de production dans dist/
 
 Voici ce qui ferait sens comme prochains chantiers, par ordre de priorité décroissante :
 
-1. **Vrais sprites animés** : remplacer les fonctions de `Drawing.js` par des `this.add.sprite()`. Kenney.nl (CC0, gratuit) propose d'excellents packs adaptés : "Tiny Dungeon", "Platformer Pack Redux", "Fantasy Town". Charger dans `Preloader.js` avec `this.load.spritesheet()`, animations avec `this.anims.create()`.
+1. **Intégrer les fonds de combat** (`Pixel-Art-Battlegrounds/`) : remplacer le fond procédural des scènes Level et Boss par les images PNG en couches (sky, bg, floor…). Chaque battleground a une version Bright et Pale. Charger dans Preloader avec `this.load.image()`.
 
-2. **Sons et musique** : `this.load.audio()` dans Preloader, `this.sound.play()` dans les scènes. Sons libres sur freesound.org ou kenney.nl.
+2. **Sprites pour skeleton/vampire/bird** : trouver ou créer des sheets avec fond transparent. Les sheets actuelles (`skelleton sheet.png`, etc.) ont un fond noir opaque inutilisable tel quel. Alternative : traiter les images avec un script pour convertir le noir en alpha.
 
-3. **Difficulté progressive** : adapter la plage des opérations selon le niveau. Par exemple, en forêt les additions résultat ≤ 30, au château résultat ≤ 60, en montagne résultat ≤ 100.
+3. **Sons et musique** : `this.load.audio()` dans Preloader, `this.sound.play()` dans les scènes. Sons libres sur freesound.org ou kenney.nl.
 
-4. **Statistiques pour les parents** : compteur de bonnes/mauvaises réponses par type d'opération, sauvegardé dans `localStorage`. Pourrait s'afficher dans le panneau React latéral.
+4. **Difficulté progressive** : adapter la plage des opérations selon le niveau. Par exemple, en forêt les additions résultat ≤ 30, au château résultat ≤ 60, en montagne résultat ≤ 100.
 
-5. **Système d'inventaire** : potions de soin gagnées en battant les monstres (par exemple 1 potion tous les 5 monstres tués), utilisables avec une touche pour récupérer 3 PV.
+5. **Statistiques pour les parents** : compteur de bonnes/mauvaises réponses par type d'opération, sauvegardé dans `localStorage`. Pourrait s'afficher dans le panneau React latéral.
 
-6. **Mode "entraînement"** : un mode séparé sans combat, juste des opérations en série pour s'échauffer.
+6. **Système d'inventaire** : potions de soin gagnées en battant les monstres (par exemple 1 potion tous les 5 monstres tués), utilisables avec une touche pour récupérer 3 PV.
+
+7. **Mode "entraînement"** : un mode séparé sans combat, juste des opérations en série pour s'échauffer.
 
 ## Préférences de l'utilisateur
 
@@ -189,3 +259,6 @@ Voici ce qui ferait sens comme prochains chantiers, par ordre de priorité décr
 - Le projet est sur GitHub : `https://github.com/nlarregue/math-game`
 - L'utilisateur a un fond technique IT (admin Microsoft 365 / Exchange Online) — il comprend les concepts de développement mais n'est pas développeur full-time. Adapter le niveau d'explication en conséquence : technique mais pas jargonneux.
 - Le jeu a été développé pour le fils de l'utilisateur, qui apprécie déjà la version actuelle.
+- Les sprites avec **fond transparent** (utilisables) : Wizard/*, slime waterB sheet, goblin sheet, Bat_0000_dark, kobold_0000_red, Werewolf_0004_brown.
+- Les sprites avec **fond noir opaque** (inutilisables sans traitement) : skelleton sheet, troll_0000_green, gnoll sheet, wolf_0001_brown, Rat_0004_dark.
+- Si les scales des sprites semblent trop grands ou trop petits visuellement, ajuster les valeurs dans `SPRITE_ANIMS` (Level.js) et les appels `.setScale()` dans Hub.js / Intro.js / Boss.js. La valeur de base est **0.32** pour le sorcier.
