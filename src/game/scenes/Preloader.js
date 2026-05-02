@@ -41,6 +41,13 @@ export class Preloader extends Scene {
         this.load.spritesheet('goblin', 'assets/sprites/Monsters/goblin sheet.png',       { frameWidth: 300, frameHeight: 180 });
         this.load.spritesheet('bat',    'assets/sprites/Monsters/Bat_0000_dark.png',      { frameWidth: 270, frameHeight: 150 });
         this.load.spritesheet('orc',    'assets/sprites/Monsters/kobold_0000_red.png',    { frameWidth: 300, frameHeight: 180 });
+
+        // ── Décors ───────────────────────────────────────────────
+        this.load.image('bg-forest',   'assets/sprites/Free Pixel Art Forest/Preview/Background.png');
+        this.load.image('bg-chateau',  'assets/sprites/Pixel-Art-Battlegrounds/PNG/Battleground2/Bright/Battleground2.png');
+        this.load.image('bg-montagne', 'assets/sprites/Pixel-Art-Battlegrounds/PNG/Battleground1/Bright/Battleground1.png');
+        this.load.image('bg-boss',     'assets/sprites/Pixel-Art-Battlegrounds/PNG/Battleground4/Bright/Battleground4.png');
+        this.load.image('bg-hub',      'assets/sprites/Pixel-Art-Battlegrounds/PNG/Battleground3/Bright/Battleground3.png');
     }
 
     create() {

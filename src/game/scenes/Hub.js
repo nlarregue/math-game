@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameState } from '../utils/SaveManager';
-import { drawForest, Colors } from '../utils/Drawing';
+import { Colors } from '../utils/Drawing';
 
 export class Hub extends Scene {
     constructor() {
@@ -16,7 +16,7 @@ export class Hub extends Scene {
 
         this.player = { x: W / 2, y: H * 0.75 };
 
-        this.bgGraphics = this.add.graphics();
+        this.add.image(W / 2, H / 2, 'bg-hub').setDisplaySize(W, H).setDepth(0);
         this.signGraphics = this.add.graphics();
         this.portalGraphics = this.add.graphics();
         this.uiGraphics = this.add.graphics();
@@ -186,8 +186,6 @@ export class Hub extends Scene {
         this.player.x = Math.max(20, Math.min(W - 20, this.player.x));
         this.player.y = Math.max(H * 0.3, Math.min(H * 0.95, this.player.y));
 
-        // Décor
-        drawForest(this.bgGraphics, this.t, W, H);
         this.drawSigns();
 
         // Wizard sprite

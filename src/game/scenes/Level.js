@@ -1,11 +1,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameState } from '../utils/SaveManager';
-import {
-    drawEnemy,
-    drawForest, drawCastle, drawMountain,
-    Colors
-} from '../utils/Drawing';
+import { drawEnemy, Colors } from '../utils/Drawing';
 
 // Types d'ennemis qui ont un vrai sprite (transparent bg)
 const SPRITE_ANIMS = {
@@ -25,12 +21,14 @@ const ENEMY_DEFS = {
     goblin: { flying: false, resistant: true }
 };
 
+const LEVEL_BG = { foret: 'bg-forest', chateau: 'bg-chateau', montagne: 'bg-montagne' };
+
 const LEVELS = {
-    foret: { drawBg: drawForest, hpRange: [1, 2], killGoal: 10,
+    foret:    { hpRange: [1, 2], killGoal: 10,
         getTypes: () => gameState.data.spells.includes('glace') ? ['slime', 'bird', 'slime'] : ['slime'] },
-    chateau: { drawBg: drawCastle, hpRange: [3, 4], killGoal: 10,
+    chateau:  { hpRange: [3, 4], killGoal: 10,
         getTypes: () => gameState.data.spells.includes('glace') ? ['skeleton', 'bat', 'vampire'] : ['skeleton', 'vampire'] },
-    montagne: { drawBg: drawMountain, hpRange: [5, 6], killGoal: 10,
+    montagne: { hpRange: [5, 6], killGoal: 10,
         getTypes: () => ['orc', 'goblin'] }
 };
 
@@ -52,7 +50,7 @@ export class Level extends Scene {
         this.player = { x: 100, y: H * 0.8 };
         this.particles = [];
 
-        this.bgGraphics = this.add.graphics();
+        this.add.image(W / 2, H / 2, LEVEL_BG[this.levelKey]).setDisplaySize(W, H).setDepth(0);
         this.enemyGraphicsList = [];
         this.particleGraphics = this.add.graphics().setDepth(20);
         this.uiGraphics = this.add.graphics();
@@ -584,9 +582,6 @@ export class Level extends Scene {
         this.t += delta / 16.67;
         const W = this.W, H = this.H;
         const lvl = LEVELS[this.levelKey];
-
-        // Décor
-        lvl.drawBg(this.bgGraphics, this.t, W, H);
 
         // Animation ennemis
         this.enemies.forEach((e, i) => {

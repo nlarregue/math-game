@@ -10,7 +10,7 @@ Jeu vidéo 2D éducatif en français, développé pour un enfant de 9 ans, desti
 
 **Statut actuel** : version fonctionnelle avec toutes les mécaniques de base. Le build de production passe (`npm run build`).
 
-Les personnages et certains monstres utilisent désormais de vrais sprites PNG animés. Les décors restent procéduraux (`Phaser.GameObjects.Graphics`). Les deux coexistent sans problème.
+Les personnages et certains monstres utilisent de vrais sprites PNG animés. Les décors de toutes les scènes de jeu (Hub, Level, Boss) utilisent désormais des images PNG pixel-art. Les ennemis sans sprite et le dragon restent procéduraux via `Drawing.js`.
 
 ## Histoire
 
@@ -71,7 +71,13 @@ public/
                             # kobold_0000_red.png (utilisé comme "orc")  skelleton sheet.png (fond noir, inutilisé)
                             # troll_0000_green.png  gnoll sheet.png  wolf_0001_brown.png  (fonds noirs, inutilisés)
                             # Werewolf_0004_brown.png  Zombies/  German shepard bundle/
-    Pixel-Art-Battlegrounds/ # Fonds de combat (non intégrés)
+    Free Pixel Art Forest/  # 12 couches PNG transparentes + preview composite (clé : bg-forest)
+    Plants/                 # Plant1.png Plant2.png Plant3.png (non intégrés)
+    Pixel-Art-Battlegrounds/ # 4 battlegrounds en versions Bright et Pale, avec couches séparées
+                            # Battleground2/Bright/Battleground2.png → bg-chateau
+                            # Battleground1/Bright/Battleground1.png → bg-montagne
+                            # Battleground4/Bright/Battleground4.png → bg-boss
+                            # Battleground3/Bright/Battleground3.png → bg-hub
 ```
 
 ## État partagé entre scènes
@@ -158,17 +164,41 @@ Pour l'écran de combat (`combatLayer`) :
 - `this.combatEnemyGraphics` : rendu procédural (fallback pour skeleton/vampire/bird)
 - `startCombat()` bascule entre les deux avec `setVisible()`
 
-### Dessin procédural (décors et ennemis sans sprite)
+### Décors PNG
+
+Les fonds sont des images statiques chargées en Preloader avec `this.load.image()` et créées une fois dans `create()` :
+
+```js
+this.add.image(W / 2, H / 2, 'bg-forest').setDisplaySize(W, H).setDepth(0);
+```
+
+| Clé Phaser | Scène | Fichier source |
+|---|---|---|
+| `bg-hub` | Hub | Battleground3/Bright/Battleground3.png |
+| `bg-forest` | Level foret | Free Pixel Art Forest/Preview/Background.png |
+| `bg-chateau` | Level chateau | Battleground2/Bright/Battleground2.png |
+| `bg-montagne` | Level montagne | Battleground1/Bright/Battleground1.png |
+| `bg-boss` | Boss | Battleground4/Bright/Battleground4.png |
+
+Le `setDisplaySize(W, H)` étire l'image pour couvrir exactement le canvas 1024×768 (déformation légère acceptable en pixel art). Pour éviter toute déformation, utiliser à la place :
+```js
+const img = this.add.image(W/2, H/2, key);
+img.setScale(Math.max(W / img.width, H / img.height));
+```
+
+Les battlegrounds ont des couches séparées (sky, bg, ruins, floor…) non utilisées pour l'instant — uniquement les composites Battleground*.png sont chargés. La `Free Pixel Art Forest` a 12 couches transparentes (Layer_0000_9 à Layer_0011_0) qui permettraient un effet parallaxe.
+
+### Dessin procédural (ennemis sans sprite + dragon + décors Intro)
 Les fonctions de `Drawing.js` prennent un objet `Graphics` en premier paramètre :
 
 ```js
-drawEnemy(graphics, enemy, t, options)   // skeleton, vampire, bird
-drawDragon(graphics, x, y, t)
-drawForest(graphics, t, w, h)
-drawCastle(graphics, t, w, h)
-drawMountain(graphics, t, w, h)
-drawHouseExterior(graphics, t, w, h)
-drawLibraryAisle(graphics, t, w, h, glowX, glowY)
+drawEnemy(graphics, enemy, t, options)   // skeleton, vampire, bird — encore utilisé
+drawDragon(graphics, x, y, t)            // encore utilisé dans Boss.js
+drawForest(graphics, t, w, h)            // utilisé uniquement dans Intro.js
+drawCastle(graphics, t, w, h)            // utilisé uniquement dans Intro.js
+drawMountain(graphics, t, w, h)          // utilisé uniquement dans Intro.js
+drawHouseExterior(graphics, t, w, h)     // Intro.js
+drawLibraryAisle(graphics, t, w, h, glowX, glowY)  // Intro.js
 ```
 
 Les couleurs sont exportées dans `Colors` (format hex Phaser : `0xff6b35` etc.).
@@ -177,7 +207,8 @@ Les couleurs sont exportées dans `Colors` (format hex Phaser : `0xff6b35` etc.)
 ```js
 create() {
     this.t = 0;
-    this.bgGraphics = this.add.graphics();
+    // Fond PNG statique (depth 0, créé en premier) :
+    this.add.image(W / 2, H / 2, 'bg-forest').setDisplaySize(W, H).setDepth(0);
     // Sprite chargé en Preloader — disponible directement :
     this.wizardSprite = this.add.sprite(x, y, 'wizard-idle').setScale(0.32).setDepth(30);
     this.wizardSprite.play('wizard-idle');
@@ -185,8 +216,7 @@ create() {
 
 update(time, delta) {
     this.t += delta / 16.67;  // Compteur de frames à 60fps
-    this.bgGraphics.clear();
-    drawForest(this.bgGraphics, this.t, this.W, this.H);
+    // Le fond est statique, pas besoin de le redessiner chaque frame
     // Mise à jour sprite :
     this.wizardSprite.setPosition(this.player.x, this.player.y);
     if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-idle') {
@@ -234,19 +264,21 @@ npm run build        # build de production dans dist/
 
 Voici ce qui ferait sens comme prochains chantiers, par ordre de priorité décroissante :
 
-1. **Intégrer les fonds de combat** (`Pixel-Art-Battlegrounds/`) : remplacer le fond procédural des scènes Level et Boss par les images PNG en couches (sky, bg, floor…). Chaque battleground a une version Bright et Pale. Charger dans Preloader avec `this.load.image()`.
+1. **Parallaxe sur la forêt** : la `Free Pixel Art Forest` fournit 12 couches PNG transparentes (Layer_0000_9 à Layer_0011_0). Charger les couches dans Preloader, les empiler dans create(), et dans update() décaler chaque couche légèrement selon `this.player.x`. Nécessite `setDisplaySize(W + 40, H)` + `setX(W/2 + offset * facteur)` par couche.
 
-2. **Sprites pour skeleton/vampire/bird** : trouver ou créer des sheets avec fond transparent. Les sheets actuelles (`skelleton sheet.png`, etc.) ont un fond noir opaque inutilisable tel quel. Alternative : traiter les images avec un script pour convertir le noir en alpha.
+2. **Couches séparées pour les battlegrounds** : chaque Battleground a des layers (sky, ruins, floor…). Les charger séparément permettrait un parallaxe ou d'animer certains éléments (lumières, flammes).
 
-3. **Sons et musique** : `this.load.audio()` dans Preloader, `this.sound.play()` dans les scènes. Sons libres sur freesound.org ou kenney.nl.
+3. **Sprites pour skeleton/vampire/bird** : trouver ou créer des sheets avec fond transparent. Les sheets actuelles (`skelleton sheet.png`, etc.) ont un fond noir opaque inutilisable tel quel. Alternative : traiter les images avec un script pour convertir le noir en alpha.
 
-4. **Difficulté progressive** : adapter la plage des opérations selon le niveau. Par exemple, en forêt les additions résultat ≤ 30, au château résultat ≤ 60, en montagne résultat ≤ 100.
+4. **Sons et musique** : `this.load.audio()` dans Preloader, `this.sound.play()` dans les scènes. Sons libres sur freesound.org ou kenney.nl.
 
-5. **Statistiques pour les parents** : compteur de bonnes/mauvaises réponses par type d'opération, sauvegardé dans `localStorage`. Pourrait s'afficher dans le panneau React latéral.
+5. **Difficulté progressive** : adapter la plage des opérations selon le niveau. Par exemple, en forêt les additions résultat ≤ 30, au château résultat ≤ 60, en montagne résultat ≤ 100.
 
-6. **Système d'inventaire** : potions de soin gagnées en battant les monstres (par exemple 1 potion tous les 5 monstres tués), utilisables avec une touche pour récupérer 3 PV.
+6. **Statistiques pour les parents** : compteur de bonnes/mauvaises réponses par type d'opération, sauvegardé dans `localStorage`. Pourrait s'afficher dans le panneau React latéral.
 
-7. **Mode "entraînement"** : un mode séparé sans combat, juste des opérations en série pour s'échauffer.
+7. **Système d'inventaire** : potions de soin gagnées en battant les monstres (par exemple 1 potion tous les 5 monstres tués), utilisables avec une touche pour récupérer 3 PV.
+
+8. **Mode "entraînement"** : un mode séparé sans combat, juste des opérations en série pour s'échauffer.
 
 ## Préférences de l'utilisateur
 

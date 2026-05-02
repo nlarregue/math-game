@@ -22,7 +22,7 @@ export class Boss extends Scene {
         this.combat = null;
         this.particles = [];
 
-        this.bgGraphics = this.add.graphics();
+        this.add.image(W / 2, H / 2, 'bg-boss').setDisplaySize(W, H).setDepth(0);
         this.dragonGraphics = this.add.graphics();
         this.particleGraphics = this.add.graphics().setDepth(20);
 
@@ -328,13 +328,6 @@ export class Boss extends Scene {
     update(time, delta) {
         this.t += delta / 16.67;
         const W = this.W, H = this.H;
-
-        // Fond
-        this.bgGraphics.clear();
-        this.bgGraphics.fillStyle(0x1a0a1a);
-        this.bgGraphics.fillRect(0, 0, W, H * 0.5);
-        this.bgGraphics.fillStyle(0x3a0a1a);
-        this.bgGraphics.fillRect(0, H * 0.5, W, H * 0.5);
 
         // Dragon
         this.dragonGraphics.clear();
