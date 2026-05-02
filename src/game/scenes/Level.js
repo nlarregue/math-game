@@ -5,10 +5,12 @@ import { drawEnemy, Colors } from '../utils/Drawing';
 
 // Types d'ennemis qui ont un vrai sprite (transparent bg)
 const SPRITE_ANIMS = {
-    slime:  { key: 'slime',  anim: 'slime-idle', scale: 0.20 },
-    goblin: { key: 'goblin', anim: 'goblin-idle', scale: 0.22 },
-    bat:    { key: 'bat',    anim: 'bat-fly',     scale: 0.26 },
-    orc:    { key: 'orc',   anim: 'orc-idle',    scale: 0.22 },
+    slime:   { key: 'slime',   anim: 'slime-idle',   scale: 0.40 },
+    goblin:  { key: 'goblin',  anim: 'goblin-idle',  scale: 0.22 },
+    bat:     { key: 'bat',     anim: 'bat-fly',      scale: 0.26 },
+    orc:     { key: 'orc',     anim: 'orc-idle',     scale: 0.22 },
+    vampire:  { key: 'vampire',  anim: 'vampire-idle',  scale: 2.52, combatScale: 1.2 },
+    skeleton: { key: 'skeleton', anim: 'skeleton-idle', scale: 1.0,  combatScale: 2.0 },
 };
 
 const ENEMY_DEFS = {
@@ -51,13 +53,14 @@ export class Level extends Scene {
         this.particles = [];
 
         this.add.image(W / 2, H / 2, LEVEL_BG[this.levelKey]).setDisplaySize(W, H).setDepth(0);
+        this.enemies = [];
         this.enemyGraphicsList = [];
         this.particleGraphics = this.add.graphics().setDepth(20);
         this.uiGraphics = this.add.graphics();
 
         this.playerFacingRight = true;
         this.wizardSprite = this.add.sprite(this.player.x, this.player.y, 'wizard-idle')
-            .setScale(0.32)
+            .setScale(1.70)
             .setDepth(30);
         this.wizardSprite.play('wizard-idle');
 
@@ -114,7 +117,7 @@ export class Level extends Scene {
 
     createCombatUI() {
         const W = this.W, H = this.H;
-        this.combatLayer = this.add.container(0, 0).setVisible(false);
+        this.combatLayer = this.add.container(0, 0).setVisible(false).setDepth(100);
 
         const overlay = this.add.graphics();
         overlay.fillStyle(Colors.black, 0.85);
@@ -132,9 +135,11 @@ export class Level extends Scene {
         this.combatEnemyGraphics = this.add.graphics();
 
         // Sprite affiché en combat pour les ennemis qui ont un vrai sprite
+        // Géré hors du container pour éviter le double rendu (Phaser 4)
         this.combatEnemySprite = this.add.sprite(W / 2, H * 0.27, 'slime')
             .setScale(0.55)
-            .setVisible(false);
+            .setVisible(false)
+            .setDepth(150);
 
         this.combatEnemyHpBar = this.add.graphics();
         this.combatEnemyHpText = this.add.text(W / 2, H * 0.37, '', {
@@ -190,7 +195,7 @@ export class Level extends Scene {
 
         this.combatLayer.add([
             overlay, box, this.combatTitle,
-            this.combatEnemyGraphics, this.combatEnemySprite,
+            this.combatEnemyGraphics,
             this.combatEnemyHpBar, this.combatEnemyHpText,
             this.warningText, this.resistText, this.spellChoiceLabel,
             ...this.spellButtons.flatMap(b => [b.btnGraphics, b.nameText, b.dmgText]),
@@ -227,10 +232,13 @@ export class Level extends Scene {
             // Sprite (si disponible) ou graphics procédural
             const cfg = SPRITE_ANIMS[type];
             if (cfg) {
-                enemy.sprite = this.add.sprite(ex, baseY, cfg.key)
-                    .setScale(cfg.scale)
-                    .setDepth(10)
-                    .play(cfg.anim);
+                try {
+                    const sp = this.add.sprite(ex, baseY, cfg.key).setScale(cfg.scale).setDepth(10);
+                    try { sp.play(cfg.anim); } catch (_) { /* animation indisponible, sprite statique */ }
+                    enemy.sprite = sp;
+                } catch (err) {
+                    console.error(`[spawnEnemies] Échec sprite "${type}" (key:${cfg.key}):`, err);
+                }
             }
             // Graphics pour les effets (gel, HP bar) et les ennemis sans sprite
             const g = this.add.graphics().setDepth(15);
@@ -274,7 +282,7 @@ export class Level extends Scene {
         if (cfg) {
             this.combatEnemySprite
                 .setTexture(cfg.key)
-                .setScale(cfg.scale * 2.6)
+                .setScale(cfg.combatScale ?? cfg.scale * 2.6)
                 .setPosition(this.W / 2, this.H * 0.27)
                 .play(cfg.anim)
                 .setVisible(true);
@@ -363,6 +371,7 @@ export class Level extends Scene {
 
                 this.combat = null;
                 this.combatLayer.setVisible(false);
+                this.combatEnemySprite.setVisible(false);
                 gameState.save();
 
                 if (this.enemies.length === 0) {
@@ -381,6 +390,7 @@ export class Level extends Scene {
             if (gameState.data.player.hp <= 0) {
                 this.combat = null;
                 this.combatLayer.setVisible(false);
+                this.combatEnemySprite.setVisible(false);
                 this.scene.start('GameOver');
                 return;
             }
@@ -458,6 +468,7 @@ export class Level extends Scene {
     }
 
     drawCombat() {
+        if (!this.combat) return;
         const c = this.combat;
         const W = this.W, H = this.H;
 
@@ -546,6 +557,7 @@ export class Level extends Scene {
         if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
             this.combat = null;
             this.combatLayer.setVisible(false);
+            this.combatEnemySprite.setVisible(false);
             return;
         }
         if (!this.combat.op) return;
@@ -621,7 +633,9 @@ export class Level extends Scene {
                 g.fillStyle(Colors.red);
                 g.fillRect(e.x - hw / 2, e.y - 42, hw * (e.hp / e.maxHp), 5);
             } else {
-                drawEnemy(g, e, this.t);
+                const ds = e.type === 'bird' ? 2 : 1;
+                g.setPosition(e.x, e.y).setScale(ds);
+                drawEnemy(g, { ...e, x: 0, y: 0 }, this.t);
             }
 
             // Texte verrou volants

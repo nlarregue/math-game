@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { Scene } from 'phaser';
 import { gameState } from '../utils/SaveManager';
-import { drawForest, drawHouseExterior, drawLibraryAisle, Colors } from '../utils/Drawing';
+import { drawForest, drawLibraryAisle, Colors } from '../utils/Drawing';
 
 const PHASES = [
     { id: 'title',          duration: null,  text: '' },
@@ -37,10 +37,21 @@ export class Intro extends Scene {
         this.textBox      = this.add.graphics().setDepth(8);
 
         this.wizardSprite = this.add.sprite(-999, -999, 'wizard-idle')
-            .setScale(0.32)
+            .setScale(1.70)
             .setDepth(7)
             .setVisible(false);
         this.wizardSprite.play('wizard-idle');
+
+        this.houseImage = this.add.image(W * 0.2, H * 0.79, 'wizard-tower')
+            .setOrigin(0.5, 1)
+            .setScale(0.7)
+            .setDepth(3)
+            .setVisible(false);
+
+        this.libraryImage = this.add.image(W * 0.79, H * 0.82, 'fantasy-library')
+            .setOrigin(0.5, 1)
+            .setDepth(3)
+            .setVisible(false);
 
         // Texte narratif (boîte en bas)
         this.introText = this.add.text(W / 2, H - 73, '', {
@@ -200,7 +211,9 @@ export class Intro extends Scene {
         this.bgGraphics.clear();
         this.fgGraphics.clear();
         this.haloGraphics.clear();
-        this.wizardSprite.setVisible(false); // chaque méthode de dessin le réactive si besoin
+        this.wizardSprite.setVisible(false);
+        this.houseImage.setVisible(false);
+        this.libraryImage.setVisible(false);
 
         switch (phase.id) {
             case 'title':          this.drawTitle(); break;
@@ -231,35 +244,59 @@ export class Intro extends Scene {
             this.bgGraphics.fillStyle(0xffffff, a);
             this.bgGraphics.fillRect(sx, sy, i % 6 === 0 ? 3 : 2, i % 6 === 0 ? 3 : 2);
         }
-        this.wizardSprite.setVisible(true).setPosition(W / 2, H * 0.72).setScale(0.32 * 1.5);
+        this.wizardSprite.setVisible(true).setPosition(W / 2, H * 0.72).setScale(1.70 * 1.5);
         if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-idle') this.wizardSprite.play('wizard-idle');
     }
 
     drawHouseWalk(progress) {
         const W = this.W, H = this.H;
-        drawHouseExterior(this.bgGraphics, this.t, W, H);
 
-        // Smoothstep pour un démarrage et une arrivée naturels
+        // Ciel dégradé
+        this.bgGraphics.fillStyle(0x6ab0e8);
+        this.bgGraphics.fillRect(0, 0, W, H * 0.76);
+        this.bgGraphics.fillStyle(0x4a7a30);
+        this.bgGraphics.fillRect(0, H * 0.76, W, H * 0.24);
+        // Chemin
+        this.bgGraphics.fillStyle(0xb89060);
+        this.bgGraphics.fillRect(W * 0.06, H * 0.74, W * 0.88, H * 0.09);
+        // Nuages
+        this.bgGraphics.fillStyle(0xffffff, 0.75);
+        this.bgGraphics.fillEllipse(W * 0.3 + Math.sin(this.t * 0.005) * 6, H * 0.13, 130, 42);
+        this.bgGraphics.fillEllipse(W * 0.68, H * 0.09, 100, 34);
+
+        // Maison
+        this.houseImage.setVisible(true);
+
+        // Sorcier — smoothstep
         const ease = progress < 0.5
             ? 2 * progress * progress
             : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-
-        const wizX = W * 0.17 + (W * 0.79 - W * 0.17) * ease;
-        const wizY = H * 0.69;
-        this.wizardSprite.setVisible(true).setPosition(wizX, wizY).setScale(0.32 * 1.1);
+        const wizX = W * 0.17 + (W * 0.82 - W * 0.17) * ease;
+        this.wizardSprite.setVisible(true).setPosition(wizX, H * 0.69).setScale(1.70 * 1.1);
         if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-run') this.wizardSprite.play('wizard-run');
     }
 
     drawLibraryEnter(progress) {
         const W = this.W, H = this.H;
-        drawLibraryAisle(this.bgGraphics, this.t, W, H);
 
-        // Ease out : le sorcier décélère en entrant
+        // Fond extérieur : ciel + sol + chemin
+        this.bgGraphics.fillStyle(0x6ab0e8);
+        this.bgGraphics.fillRect(0, 0, W, H * 0.76);
+        this.bgGraphics.fillStyle(0x4a7a30);
+        this.bgGraphics.fillRect(0, H * 0.76, W, H * 0.24);
+        this.bgGraphics.fillStyle(0xb89060);
+        this.bgGraphics.fillRect(W * 0.06, H * 0.74, W * 0.88, H * 0.09);
+        this.bgGraphics.fillStyle(0xffffff, 0.7);
+        this.bgGraphics.fillEllipse(W * 0.22, H * 0.12, 110, 36);
+        this.bgGraphics.fillEllipse(W * 0.55, H * 0.08, 85, 28);
+
+        // Bâtiment de la bibliothèque (côté droit)
+        this.libraryImage.setVisible(true);
+
+        // Sorcier qui s'approche, décélère en arrivant devant l'entrée
         const ease = 1 - Math.pow(1 - progress, 2);
-        const wizX = W * 0.08 + (W * 0.43 - W * 0.08) * ease;
-        const wizY = H * 0.7;
-        const scale = 0.85 + ease * 0.3;
-        this.wizardSprite.setVisible(true).setPosition(wizX, wizY).setScale(0.32 * scale);
+        const wizX = W * 0.08 + (W * 0.57 - W * 0.08) * ease;
+        this.wizardSprite.setVisible(true).setPosition(wizX, H * 0.69).setScale(1.70 * 1.1);
         if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-run') this.wizardSprite.play('wizard-run');
     }
 
@@ -269,7 +306,7 @@ export class Intro extends Scene {
 
         const wizX = W * 0.36 + (W * 0.52 - W * 0.36) * progress;
         const scale = 1.1 + progress * 0.1;
-        this.wizardSprite.setVisible(true).setPosition(wizX, H * 0.7).setScale(0.32 * scale);
+        this.wizardSprite.setVisible(true).setPosition(wizX, H * 0.7).setScale(1.70 * scale);
         if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-run') this.wizardSprite.play('wizard-run');
     }
 
@@ -283,7 +320,7 @@ export class Intro extends Scene {
         // Le sorcier s'arrête, puis pointe son bâton vers le livre
         const casting = progress > 0.45;
         const wAnim = casting ? 'wizard-attack' : 'wizard-idle';
-        this.wizardSprite.setVisible(true).setPosition(W * 0.44, H * 0.7).setScale(0.32 * 1.2);
+        this.wizardSprite.setVisible(true).setPosition(W * 0.44, H * 0.7).setScale(1.70 * 1.2);
         if (this.wizardSprite.anims.currentAnim?.key !== wAnim) this.wizardSprite.play(wAnim);
 
         // Halo extérieur supplémentaire qui grandit progressivement
@@ -360,7 +397,7 @@ export class Intro extends Scene {
         const a = 0.3 + Math.sin(this.t * 0.1) * 0.2;
         this.haloGraphics.fillStyle(Colors.gold, a);
         this.haloGraphics.fillCircle(W / 2, H * 0.76, 52);
-        this.wizardSprite.setVisible(true).setPosition(W / 2, H * 0.76).setScale(0.32 * 1.3);
+        this.wizardSprite.setVisible(true).setPosition(W / 2, H * 0.76).setScale(1.70 * 1.3);
         if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-idle') this.wizardSprite.play('wizard-idle');
     }
 }

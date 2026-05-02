@@ -23,7 +23,7 @@ export class Hub extends Scene {
 
         this.playerFacingRight = true;
         this.wizardSprite = this.add.sprite(this.player.x, this.player.y, 'wizard-idle')
-            .setScale(0.32)
+            .setScale(1.70)
             .setDepth(30);
         this.wizardSprite.play('wizard-idle');
 

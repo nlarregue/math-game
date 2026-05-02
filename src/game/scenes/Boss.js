@@ -27,7 +27,7 @@ export class Boss extends Scene {
         this.particleGraphics = this.add.graphics().setDepth(20);
 
         this.wizardSprite = this.add.sprite(this.player.x, this.player.y, 'wizard-idle')
-            .setScale(0.32)
+            .setScale(1.70)
             .setDepth(30);
         this.wizardSprite.play('wizard-idle');
 

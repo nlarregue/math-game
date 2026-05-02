@@ -8,13 +8,23 @@ Jeu vidéo 2D éducatif en français, développé pour un enfant de 9 ans, desti
 
 **Stack** : Phaser 4 + React 19 + Vite (basé sur le template officiel `phaserjs/template-react`).
 
-**Statut actuel** : version fonctionnelle avec toutes les mécaniques de base. Le build de production passe (`npm run build`).
+**Statut actuel** : version fonctionnelle avec toutes les mécaniques de base. Le build de production passe (`npm run build`). Déploiement automatique sur GitHub Pages configuré via `.github/workflows/deploy.yml` → `https://nlarregue.github.io/math-game/`
 
 Les personnages et certains monstres utilisent de vrais sprites PNG animés. Les décors de toutes les scènes de jeu (Hub, Level, Boss) utilisent désormais des images PNG pixel-art. Les ennemis sans sprite et le dragon restent procéduraux via `Drawing.js`.
 
 ## Histoire
 
-Le sorcier Eldrin part à la recherche du Grimoire Sacré d'Aetheria. Une intro narrative en 6 étapes (titre, bibliothèque, découverte du livre, lecture du grimoire, révélation de la carte, départ) le mène à un hub central d'où il peut explorer trois niveaux : Forêt, Château, Montagne. Une fois les trois terminés, un dragon gardien apparaît dans le hub pour le combat final.
+Le sorcier Eldrin part à la recherche du Grimoire Sacré d'Aetheria. Une intro narrative en 8 phases le mène à un hub central d'où il peut explorer trois niveaux : Forêt, Château, Montagne. Une fois les trois terminés, un dragon gardien apparaît dans le hub pour le combat final.
+
+Phases de l'intro :
+1. `title` — écran titre animé
+2. `house_walk` — Eldrin quitte sa tour (image PNG `wizard-tower`)
+3. `library_enter` — il s'approche de la bibliothèque (image PNG `fantasy-library`)
+4. `library_walk` — il cherche à l'intérieur (rendu procédural `drawLibraryAisle`)
+5. `book_found` — il découvre le grimoire (rendu procédural avec halo doré)
+6. `grimoire_open` — les pages du grimoire (rendu procédural)
+7. `map_reveal` — la carte magique (rendu procédural)
+8. `depart` — il part vers la forêt (rendu procédural `drawForest`)
 
 ## Mécaniques de jeu
 
@@ -45,6 +55,9 @@ Dragon de 15 PV, débloqué quand les 3 niveaux sont terminés. Pas résistant, 
 ## Architecture des fichiers
 
 ```
+.github/
+  workflows/
+    deploy.yml            # Build + déploiement automatique sur GitHub Pages (push sur main)
 src/
   App.jsx                   # Wrapper React, panneau latéral avec bouton reset
   PhaserGame.jsx            # Composant qui héberge le canvas Phaser
@@ -65,15 +78,22 @@ src/
       Drawing.js            # Fonctions de dessin procédural (décors, dragon, ennemis sans sprite)
 public/
   style.css                 # Style de l'interface React
-  assets/sprites/
-    Wizard/                 # Idle.png Run.png Attack1.png Attack2.png Hit.png Death.png Jump.png Fall.png
-    Monsters/               # slime waterB sheet.png  goblin sheet.png  Bat_0000_dark.png
-                            # kobold_0000_red.png (utilisé comme "orc")  skelleton sheet.png (fond noir, inutilisé)
-                            # troll_0000_green.png  gnoll sheet.png  wolf_0001_brown.png  (fonds noirs, inutilisés)
+  assets/
+    wizard-tower.png        # Tour du sorcier (280×600, fond transparent) — phase house_walk de l'intro
+    fantasy-library2.png    # Bâtiment bibliothèque (215×456, fond transparent) — phase library_enter de l'intro
+    Fantasy-library.png     # Source originale avec les 3 modèles (ne pas charger dans le jeu)
+    sprites/
+      Wizard/               # Idle.png Run.png Attack1.png Attack2.png Hit.png Death.png Jump.png Fall.png
+      Monsters/             # slime waterB sheet.png  goblin sheet.png  Bat_0000_dark.png
+                            # kobold_0000_red.png (utilisé comme "orc")
+                            # skelleton sheet.png  troll_0000_green.png  gnoll sheet.png
+                            # wolf_0001_brown.png  Rat_0004_dark.png (fonds noirs, inutilisés)
                             # Werewolf_0004_brown.png  Zombies/  German shepard bundle/
-    Free Pixel Art Forest/  # 12 couches PNG transparentes + preview composite (clé : bg-forest)
-    Plants/                 # Plant1.png Plant2.png Plant3.png (non intégrés)
-    Pixel-Art-Battlegrounds/ # 4 battlegrounds en versions Bright et Pale, avec couches séparées
+      vampire-pixel-art-sprite/Converted_Vampire/  # Idle.png (5 frames) + Run.png (8 frames), 128×128
+      skeleton enemy/       # Skeleton enemy.png (832×320, 64×64 par frame, 13×5)
+      Free Pixel Art Forest/  # 12 couches PNG transparentes + preview composite (clé : bg-forest)
+      Plants/               # Plant1.png Plant2.png Plant3.png (non intégrés)
+      Pixel-Art-Battlegrounds/ # 4 battlegrounds en versions Bright et Pale, avec couches séparées
                             # Battleground2/Bright/Battleground2.png → bg-chateau
                             # Battleground1/Bright/Battleground1.png → bg-montagne
                             # Battleground4/Bright/Battleground4.png → bg-boss
@@ -126,7 +146,7 @@ Les sprites sont chargés dans `Preloader.preload()` et les animations créées 
 | `wizard-hit` | 0–3 | `wizard-hit` (repeat 0) |
 | `wizard-death` | 0–6 | `wizard-death` (repeat 0) |
 
-Scale utilisé : **0.32** dans toutes les scènes (le sprite occupe environ 50-60 px de haut à l'écran).
+Scale utilisé : **1.70** dans toutes les scènes (Hub, Level, Boss, Intro). Dans Intro.js les scales sont exprimés sous forme `1.70 * multiplicateur` pour conserver les proportions relatives entre les phases.
 
 **Monstres avec fond transparent** (intégrés) :
 | Type jeu | Clé texture | Frame size | Anim idle |
@@ -135,20 +155,33 @@ Scale utilisé : **0.32** dans toutes les scènes (le sprite occupe environ 50-6
 | `goblin` | `goblin` | 300×180 | `goblin-idle` (frames 0–8) |
 | `bat` | `bat` | 270×150 | `bat-fly` (frames 0–4) |
 | `orc` | `orc` | 300×180 | `orc-idle` (frames 0–8) |
+| `vampire`  | `vampire` / `vampire-run` | 128×128 | `vampire-idle` (frames 0–4) / `vampire-run` (frames 0–7) |
+| `skeleton` | `skeleton` | 64×64 (13 cols × 5 rows) | `skeleton-idle` (frames 0–12, rangée 0) |
 
 Le kobold (`kobold_0000_red.png`) est utilisé comme visuel pour le type `orc`.
 
 **Monstres restés procéduraux** (leur sheet PNG a un fond noir opaque, pas de transparence) :
-`skeleton`, `vampire`, `bird` → dessinés via `drawEnemy()` de `Drawing.js`.
+`bird` → dessiné via `drawEnemy()` de `Drawing.js`.
 
 **`SPRITE_ANIMS`** (dans `Level.js`) — map type→config :
 ```js
 const SPRITE_ANIMS = {
-    slime:  { key: 'slime',  anim: 'slime-idle', scale: 0.20 },
-    goblin: { key: 'goblin', anim: 'goblin-idle', scale: 0.22 },
-    bat:    { key: 'bat',    anim: 'bat-fly',     scale: 0.26 },
-    orc:    { key: 'orc',   anim: 'orc-idle',    scale: 0.22 },
+    slime:    { key: 'slime',    anim: 'slime-idle',    scale: 0.40 },
+    goblin:   { key: 'goblin',   anim: 'goblin-idle',   scale: 0.22 },
+    bat:      { key: 'bat',      anim: 'bat-fly',       scale: 0.26 },
+    orc:      { key: 'orc',      anim: 'orc-idle',      scale: 0.22 },
+    vampire:  { key: 'vampire',  anim: 'vampire-idle',  scale: 2.52, combatScale: 1.2 },
+    skeleton: { key: 'skeleton', anim: 'skeleton-idle', scale: 1.0,  combatScale: 2.0 },
 };
+```
+
+`combatScale` (optionnel) : scale du sprite dans l'UI de combat. Si absent, `startCombat()` utilise `cfg.scale * 2.6`.
+
+Pour les ennemis procéduraux avec scale spécifique (ex: bird ×2), le rendu dans `update()` utilise un transform sur le Graphics :
+```js
+const ds = e.type === 'bird' ? 2 : 1;
+g.setPosition(e.x, e.y).setScale(ds);
+drawEnemy(g, { ...e, x: 0, y: 0 }, this.t);
 ```
 
 Si un type est absent de cette map, `drawEnemy()` Graphics est utilisé en fallback.
@@ -160,9 +193,11 @@ Pour les ennemis avec sprite :
 - Un objet **Graphics** dédié (dans `enemyGraphicsList`) gère les overlays : aura de gel, HP bar, ombre des volants
 
 Pour l'écran de combat (`combatLayer`) :
-- `this.combatEnemySprite` : sprite du monstre (montré si l'ennemi a un sprite)
-- `this.combatEnemyGraphics` : rendu procédural (fallback pour skeleton/vampire/bird)
+- `this.combatEnemySprite` : sprite du monstre — **hors du container**, depth 150, géré explicitement avec `setVisible()`. Ne pas le remettre dans `combatLayer.add()` : Phaser 4 ne retire pas les sprites de la display list de scène quand on les ajoute à un container, ce qui cause un double rendu.
+- `this.combatEnemyGraphics` : rendu procédural (fallback pour skeleton/vampire/bird), dans le container
+- `this.combatLayer` : depth 100, couvre tous les sprites du monde (depth 10–30)
 - `startCombat()` bascule entre les deux avec `setVisible()`
+- Toujours appeler `this.combatEnemySprite.setVisible(false)` en même temps que `this.combatLayer.setVisible(false)`
 
 ### Décors PNG
 
@@ -192,13 +227,13 @@ Les battlegrounds ont des couches séparées (sky, bg, ruins, floor…) non util
 Les fonctions de `Drawing.js` prennent un objet `Graphics` en premier paramètre :
 
 ```js
-drawEnemy(graphics, enemy, t, options)   // skeleton, vampire, bird — encore utilisé
-drawDragon(graphics, x, y, t)            // encore utilisé dans Boss.js
-drawForest(graphics, t, w, h)            // utilisé uniquement dans Intro.js
-drawCastle(graphics, t, w, h)            // utilisé uniquement dans Intro.js
-drawMountain(graphics, t, w, h)          // utilisé uniquement dans Intro.js
-drawHouseExterior(graphics, t, w, h)     // Intro.js
-drawLibraryAisle(graphics, t, w, h, glowX, glowY)  // Intro.js
+drawEnemy(graphics, enemy, t, options)              // bird — encore utilisé (skeleton/vampire ont des sprites)
+drawDragon(graphics, x, y, t)                       // encore utilisé dans Boss.js
+drawForest(graphics, t, w, h)                       // Intro.js phase depart
+drawLibraryAisle(graphics, t, w, h, glowX, glowY)  // Intro.js phases library_walk et book_found
+drawCastle(graphics, t, w, h)                       // défini dans Drawing.js mais non utilisé actuellement
+drawMountain(graphics, t, w, h)                     // défini dans Drawing.js mais non utilisé actuellement
+drawHouseExterior(graphics, t, w, h)                // défini dans Drawing.js mais non utilisé actuellement
 ```
 
 Les couleurs sont exportées dans `Colors` (format hex Phaser : `0xff6b35` etc.).
@@ -210,7 +245,7 @@ create() {
     // Fond PNG statique (depth 0, créé en premier) :
     this.add.image(W / 2, H / 2, 'bg-forest').setDisplaySize(W, H).setDepth(0);
     // Sprite chargé en Preloader — disponible directement :
-    this.wizardSprite = this.add.sprite(x, y, 'wizard-idle').setScale(0.32).setDepth(30);
+    this.wizardSprite = this.add.sprite(x, y, 'wizard-idle').setScale(1.70).setDepth(30);
     this.wizardSprite.play('wizard-idle');
 }
 
@@ -268,7 +303,7 @@ Voici ce qui ferait sens comme prochains chantiers, par ordre de priorité décr
 
 2. **Couches séparées pour les battlegrounds** : chaque Battleground a des layers (sky, ruins, floor…). Les charger séparément permettrait un parallaxe ou d'animer certains éléments (lumières, flammes).
 
-3. **Sprites pour skeleton/vampire/bird** : trouver ou créer des sheets avec fond transparent. Les sheets actuelles (`skelleton sheet.png`, etc.) ont un fond noir opaque inutilisable tel quel. Alternative : traiter les images avec un script pour convertir le noir en alpha.
+3. **Sprite pour bird** : le seul ennemi encore procédural. Trouver une sheet avec fond transparent ou traiter une sheet existante (supprimer le noir en alpha via PIL, comme fait pour wizard-tower.png).
 
 4. **Sons et musique** : `this.load.audio()` dans Preloader, `this.sound.play()` dans les scènes. Sons libres sur freesound.org ou kenney.nl.
 
@@ -291,6 +326,14 @@ Voici ce qui ferait sens comme prochains chantiers, par ordre de priorité décr
 - Le projet est sur GitHub : `https://github.com/nlarregue/math-game`
 - L'utilisateur a un fond technique IT (admin Microsoft 365 / Exchange Online) — il comprend les concepts de développement mais n'est pas développeur full-time. Adapter le niveau d'explication en conséquence : technique mais pas jargonneux.
 - Le jeu a été développé pour le fils de l'utilisateur, qui apprécie déjà la version actuelle.
-- Les sprites avec **fond transparent** (utilisables) : Wizard/*, slime waterB sheet, goblin sheet, Bat_0000_dark, kobold_0000_red, Werewolf_0004_brown.
-- Les sprites avec **fond noir opaque** (inutilisables sans traitement) : skelleton sheet, troll_0000_green, gnoll sheet, wolf_0001_brown, Rat_0004_dark.
-- Si les scales des sprites semblent trop grands ou trop petits visuellement, ajuster les valeurs dans `SPRITE_ANIMS` (Level.js) et les appels `.setScale()` dans Hub.js / Intro.js / Boss.js. La valeur de base est **0.32** pour le sorcier.
+- Les sprites avec **fond transparent** (utilisables) : Wizard/*, slime waterB sheet, goblin sheet, Bat_0000_dark, kobold_0000_red, vampire-pixel-art-sprite/Converted_Vampire/* (128×128 px/frame), skeleton enemy/Skeleton enemy.png (64×64 px/frame, 13×5).
+- Les sprites avec **fond noir opaque** (inutilisables sans traitement) : skelleton sheet, troll_0000_green, gnoll sheet, wolf_0001_brown, Rat_0004_dark. On peut supprimer le fond noir avec PIL : pixels (R<25, G<25, B<25) → alpha=0 (voir traitement de wizard-tower.png).
+- **Images statiques Intro** : `wizard-tower.png` et `fantasy-library2.png` sont dans `public/assets/` (pas dans `sprites/`). Traitement PIL appliqué (suppression fond, rognage, redimensionnement). Pour ajouter d'autres images de décor : même pattern — charger dans Preloader avec `this.load.image()`, créer dans `Intro.create()` avec `.setVisible(false)`, cacher dans `update()` avant les méthodes de dessin, activer uniquement dans la méthode qui en a besoin.
+- Si les scales des sprites semblent trop grands ou trop petits visuellement, ajuster les valeurs dans `SPRITE_ANIMS` (Level.js) et les appels `.setScale()` dans Hub.js / Intro.js / Boss.js. La valeur de base est **1.70** pour le sorcier.
+- **Bugs connus corrigés** (ne pas réintroduire) :
+  - `this.enemies = []` doit être initialisé dans `create()` de Level.js avant l'appel à `spawnEnemies()`, sinon crash au chargement du niveau.
+  - `drawCombat()` doit commencer par `if (!this.combat) return` — `handleCombatInput()` peut mettre `this.combat = null` avant que `drawCombat()` soit appelé dans la même frame.
+  - `combatEnemySprite` ne doit pas être dans `combatLayer.add([...])` (double rendu Phaser 4).
+  - Dans `spawnEnemies()`, la création du sprite et l'appel `.play()` doivent être dans deux try-catch imbriqués séparés : si l'animation échoue, le sprite reste visible (frame statique) au lieu de tomber en fallback procédural.
+  - L'animation `skeleton-idle` doit être créée conditionnellement : vérifier `this.textures.get('skeleton').frameTotal > 12` avant `anims.create()`. Si le check échoue, un `console.warn` l'indique (la texture n'a pas chargé comme spritesheet).
+  - Le chemin du spritesheet skeleton dans Preloader doit avoir un S majuscule : `'assets/sprites/Skeleton enemy/Skeleton enemy.png'` (correspond exactement au nom du dossier sur le filesystem).
