@@ -48,7 +48,7 @@ export class Intro extends Scene {
             .setDepth(3)
             .setVisible(false);
 
-        this.libraryImage = this.add.image(W * 0.79, H * 0.82, 'fantasy-library')
+        this.libraryImage = this.add.image(W * 0.72, H * 0.82, 'fantasy-library')
             .setOrigin(0.5, 1)
             .setDepth(3)
             .setVisible(false);

@@ -47,7 +47,7 @@ export class Preloader extends Scene {
 
         // ── Décors ───────────────────────────────────────────────
         this.load.image('wizard-tower',     'assets/wizard-tower.png');
-        this.load.image('fantasy-library', 'assets/fantasy-library2.png');
+        this.load.image('fantasy-library', 'assets/mystical-house.png');
         this.load.image('bg-forest',   'assets/sprites/Free Pixel Art Forest/Preview/Background.png');
         this.load.image('bg-chateau',  'assets/sprites/Pixel-Art-Battlegrounds/PNG/Battleground2/Bright/Battleground2.png');
         this.load.image('bg-montagne', 'assets/sprites/Pixel-Art-Battlegrounds/PNG/Battleground1/Bright/Battleground1.png');
