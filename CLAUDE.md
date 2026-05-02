@@ -59,12 +59,13 @@ Dragon de 15 PV, débloqué quand les 3 niveaux sont terminés. Pas résistant, 
   workflows/
     deploy.yml            # Build + déploiement automatique sur GitHub Pages (push sur main)
 src/
-  App.jsx                   # Wrapper React, panneau latéral avec bouton reset
+  App.jsx                   # Wrapper React : intègre PhaserGame + VirtualControls, panneau latéral reset
   PhaserGame.jsx            # Composant qui héberge le canvas Phaser
+  VirtualControls.jsx       # Overlay tactile (D-pad, sorts, pavé numérique) — affiché sur écrans touch
   main.jsx                  # Entry point React
   game/
     main.js                 # Config Phaser, liste des scènes (canvas 1024×768)
-    EventBus.js             # (présent mais non utilisé actuellement)
+    EventBus.js             # Bus d'événements Phaser ↔ React (EventBus.emit / EventBus.on)
     scenes/
       Boot.js               # Démarre Preloader
       Preloader.js          # Charge les sprites (preload) + crée les animations, puis route vers Intro ou Hub
@@ -76,12 +77,13 @@ src/
     utils/
       SaveManager.js        # localStorage + singleton gameState
       Drawing.js            # Fonctions de dessin procédural (décors, dragon, ennemis sans sprite)
+      VirtualInput.js       # Singleton d'état clavier virtuel partagé Phaser ↔ React
 public/
   style.css                 # Style de l'interface React
   assets/
+    wizard-red.png          # Sprite sorcier (384×32, 12 frames 32×32) — extrait ligne 5 de Sprite-0002.png
     wizard-tower.png        # Tour du sorcier (280×600, fond transparent) — phase house_walk de l'intro
     mystical-house.png      # Bâtiment bibliothèque (520×540, fond transparent) — phase library_enter de l'intro
-    fantasy-library2.png    # Ancienne version (peut être supprimée)
     Fantasy-library.png     # Source originale avec les 3 modèles (ne pas charger dans le jeu)
     sprites/
       Wizard/               # Idle.png Run.png Attack1.png Attack2.png Hit.png Death.png Jump.png Fall.png
@@ -149,29 +151,33 @@ Les sprites sont chargés dans `Preloader.preload()` et les animations créées 
 Scale utilisé : **2.5** dans toutes les scènes (Hub, Level, Boss, Intro). Dans Intro.js les scales sont exprimés sous forme `2.5 * multiplicateur` pour conserver les proportions relatives entre les phases.
 
 **Monstres avec fond transparent** (intégrés) :
-| Type jeu | Clé texture | Frame size | Anim idle |
+| Type jeu | Clé texture | Frame size | Anim |
 |---|---|---|---|
-| `slime` | `slime` | 300×270 | `slime-idle` (frames 0–8) |
+| `slime` | `slime` | 16×16 (5 cols × 4 rows) | `slime-idle` (frames 0–4, rangée 0) |
+| `bird` | `bee` | 32×32 | `bee-fly` (frame 0 statique) |
 | `goblin` | `goblin` | 300×180 | `goblin-idle` (frames 0–8) |
-| `bat` | `bat` | 270×150 | `bat-fly` (frames 0–4) |
+| `bat` | `bat` | 32×32 (3 cols × 4 rows) | `bat-fly` (frames 3–5, rangée 1 = gauche) |
+| `ghost` | `ghost` | 32×32 (3 cols × 4 rows) | `ghost-fly` (frames 3–5, rangée 1 = gauche) |
 | `orc` | `orc` | 300×180 | `orc-idle` (frames 0–8) |
-| `vampire`  | `vampire` / `vampire-run` | 128×128 | `vampire-idle` (frames 0–4) / `vampire-run` (frames 0–7) |
-| `skeleton` | `skeleton` | 64×64 (13 cols × 5 rows) | `skeleton-idle` (frames 0–12, rangée 0) |
+| `vampire` | `vampire` / `vampire-run` | 128×128 | `vampire-idle` (0–4) / `vampire-run` (0–7) |
+| `skeleton` | `skeleton` | 32×32 (3 cols × 4 rows) | `skeleton-idle` (frames 3–5, rangée 1 = gauche) |
+| `skeleton-dark` | `skeleton-dark` | 32×32 | `skeleton-dark-idle` (frames 3–5) |
 
 Le kobold (`kobold_0000_red.png`) est utilisé comme visuel pour le type `orc`.
-
-**Monstres restés procéduraux** (leur sheet PNG a un fond noir opaque, pas de transparence) :
-`bird` → dessiné via `drawEnemy()` de `Drawing.js`.
+`bat` et `ghost` sont les fantômes (`Fantome-noir.png` / `Fantome-bleu.png`) qui remplacent les chauves-souris.
 
 **`SPRITE_ANIMS`** (dans `Level.js`) — map type→config :
 ```js
 const SPRITE_ANIMS = {
-    slime:    { key: 'slime',    anim: 'slime-idle',    scale: 0.40 },
-    goblin:   { key: 'goblin',   anim: 'goblin-idle',   scale: 0.22 },
-    bat:      { key: 'bat',      anim: 'bat-fly',       scale: 0.26 },
-    orc:      { key: 'orc',      anim: 'orc-idle',      scale: 0.22 },
-    vampire:  { key: 'vampire',  anim: 'vampire-idle',  scale: 2.52, combatScale: 1.2 },
-    skeleton: { key: 'skeleton', anim: 'skeleton-idle', scale: 1.0,  combatScale: 2.0 },
+    slime:          { key: 'slime',         anim: 'slime-idle',         scale: 4.0,  combatScale: 6.0 },
+    bird:           { key: 'bee',           anim: 'bee-fly',            scale: 2.0,  combatScale: 3.5 },
+    goblin:         { key: 'goblin',        anim: 'goblin-idle',        scale: 0.22 },
+    bat:            { key: 'bat',           anim: 'bat-fly',            scale: 2.5,  combatScale: 4.0 },
+    ghost:          { key: 'ghost',         anim: 'ghost-fly',          scale: 2.5,  combatScale: 4.0 },
+    orc:            { key: 'orc',           anim: 'orc-idle',           scale: 0.22 },
+    vampire:        { key: 'vampire',       anim: 'vampire-idle',       scale: 2.52, combatScale: 1.2 },
+    skeleton:       { key: 'skeleton',      anim: 'skeleton-idle',      scale: 2.5,  combatScale: 4.0 },
+    'skeleton-dark':{ key: 'skeleton-dark', anim: 'skeleton-dark-idle', scale: 2.5,  combatScale: 4.0 },
 };
 ```
 
@@ -245,7 +251,7 @@ create() {
     // Fond PNG statique (depth 0, créé en premier) :
     this.add.image(W / 2, H / 2, 'bg-forest').setDisplaySize(W, H).setDepth(0);
     // Sprite chargé en Preloader — disponible directement :
-    this.wizardSprite = this.add.sprite(x, y, 'wizard-red').setScale(5.0).setDepth(30);
+    this.wizardSprite = this.add.sprite(x, y, 'wizard-red').setScale(2.5).setDepth(30);
     this.wizardSprite.play('wizard-idle');
 }
 
@@ -258,6 +264,27 @@ update(time, delta) {
         this.wizardSprite.play('wizard-idle');
     }
 }
+```
+
+### EventBus (communication Phaser ↔ React)
+
+`EventBus` est un `Phaser.Events.EventEmitter` partagé. Il sert actuellement à signaler le mode d'interface à `VirtualControls` :
+
+```js
+import { EventBus } from '../EventBus';
+
+// Dans chaque scène (create / startCombat / handleCombatInput) :
+EventBus.emit('ui-mode', 'hub');      // Hub.create()
+EventBus.emit('ui-mode', 'level');    // Level.create() + fin combat Level
+EventBus.emit('ui-mode', 'combat');   // Level.startCombat() + Boss.startCombat()
+EventBus.emit('ui-mode', 'boss');     // Boss.create() + fin combat Boss
+EventBus.emit('ui-mode', 'intro');    // Intro.create()
+
+// Dans VirtualControls.jsx :
+useEffect(() => {
+    EventBus.on('ui-mode', setMode);
+    return () => EventBus.off('ui-mode', setMode);
+}, []);
 ```
 
 ### Combat dans Level.js et Boss.js
@@ -279,6 +306,7 @@ L'UI de combat est un `Phaser.GameObjects.Container` (`this.combatLayer`) qu'on 
 
 ## Contrôles
 
+### Clavier (desktop)
 - **Flèches** : déplacement
 - **Espace** : action contextuelle (entrer dans un panneau, démarrer un combat, passer une scène d'intro)
 - **1, 2, 3** : changer de sort en combat
@@ -286,6 +314,44 @@ L'UI de combat est un `Phaser.GameObjects.Container` (`this.combatLayer`) qu'on 
 - **Entrée** : valider la réponse
 - **Échap** : fuir le combat
 - **H** : retour au hub depuis un niveau
+
+### Tactile / tablette (overlay React)
+
+Les contrôles virtuels sont affichés automatiquement si `navigator.maxTouchPoints > 0`. Ils s'adaptent au contexte via `EventBus.emit('ui-mode', mode)` émis par chaque scène :
+
+| Mode émis | Scène | Contrôles affichés |
+|---|---|---|
+| `'intro'` | Intro | Bouton **Suivant ▶** |
+| `'hub'` | Hub | D-pad + bouton **ACTION** |
+| `'level'` | Level (exploration) | D-pad + **ACTION** + **← Hub** |
+| `'boss'` | Boss (hors combat) | D-pad + **ACTION** |
+| `'combat'` | Level/Boss (combat actif) | Sorts 🔥❄️⚡ + **Fuir ✕** · Pavé 0–9 + ⌫ + ↵ |
+
+**Architecture virtualInput** (`src/game/utils/VirtualInput.js`) :
+```js
+import { virtualInput } from '../utils/VirtualInput';
+
+// Directions — maintenues tant que le bouton est pressé
+if (this.cursors.left.isDown || virtualInput.left) { ... }
+
+// Actions one-shot — consommées à la première lecture
+if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || virtualInput.space) {
+    virtualInput.space = false;
+    ...
+}
+
+// Chiffres
+if (Phaser.Input.Keyboard.JustDown(this.numKeys[i]) || virtualInput.digit === String(i)) {
+    if (virtualInput.digit === String(i)) virtualInput.digit = null;
+    ...
+}
+
+// Sorts
+if (...spellHotkeys.feu... || virtualInput.spell === 'feu') {
+    if (virtualInput.spell === 'feu') virtualInput.spell = null;
+    ...
+}
+```
 
 ## Lancer le projet
 
@@ -327,7 +393,7 @@ Voici ce qui ferait sens comme prochains chantiers, par ordre de priorité décr
 - L'utilisateur a un fond technique IT (admin Microsoft 365 / Exchange Online) — il comprend les concepts de développement mais n'est pas développeur full-time. Adapter le niveau d'explication en conséquence : technique mais pas jargonneux.
 - Le jeu a été développé pour le fils de l'utilisateur, qui apprécie déjà la version actuelle.
 - Les sprites avec **fond transparent** (utilisables) : `wizard-red.png` (extrait de `Sprite-0002.png` ligne 5, 32×32), goblin sheet, kobold_0000_red, vampire-pixel-art-sprite/Converted_Vampire/* (128×128 px/frame).
-- Les sprites avec **fond noir opaque** (inutilisables sans traitement) : skelleton sheet, troll_0000_green, gnoll sheet, wolf_0001_brown, Rat_0004_dark. On peut supprimer le fond noir avec PIL : pixels (R<25, G<25, B<25) → alpha=0 (voir traitement de wizard-tower.png).
+- Les sprites avec **fond noir opaque** (inutilisables sans traitement) : skelleton sheet, troll_0000_green, gnoll sheet, wolf_0001_brown, Rat_0004_dark. On peut supprimer le fond noir avec PIL : pixels (R<25, G<25, B<25) → alpha=0.
 - **Images statiques Intro** : `wizard-tower.png` et `mystical-house.png` sont dans `public/assets/` (pas dans `sprites/`). Traitement PIL appliqué (suppression fond, rognage, redimensionnement). Pour ajouter d'autres images de décor : même pattern — charger dans Preloader avec `this.load.image()`, créer dans `Intro.create()` avec `.setVisible(false)`, cacher dans `update()` avant les méthodes de dessin, activer uniquement dans la méthode qui en a besoin.
 - Si les scales des sprites semblent trop grands ou trop petits visuellement, ajuster les valeurs dans `SPRITE_ANIMS` (Level.js) et les appels `.setScale()` dans Hub.js / Intro.js / Boss.js. La valeur de base est **2.5** pour le sorcier (sprite 32×32 de `wizard-red.png`).
 - **Bugs connus corrigés** (ne pas réintroduire) :
@@ -337,3 +403,5 @@ Voici ce qui ferait sens comme prochains chantiers, par ordre de priorité décr
   - Dans `spawnEnemies()`, la création du sprite et l'appel `.play()` doivent être dans deux try-catch imbriqués séparés : si l'animation échoue, le sprite reste visible (frame statique) au lieu de tomber en fallback procédural.
   - L'animation `skeleton-idle` doit être créée conditionnellement : vérifier `this.textures.get('skeleton').frameTotal > 12` avant `anims.create()`. Si le check échoue, un `console.warn` l'indique (la texture n'a pas chargé comme spritesheet).
   - Le chemin du spritesheet skeleton dans Preloader doit avoir un S majuscule : `'assets/sprites/Skeleton enemy/Skeleton enemy.png'` (correspond exactement au nom du dossier sur le filesystem).
+  - `EventBus.js` utilise `import * as Phaser from 'phaser'` (pas `import Phaser from 'phaser'` — Phaser 4 n'a pas d'export default).
+  - `VirtualControls` doit être rendu dans un `<div style={{ position: 'relative' }}>` qui enveloppe aussi `<PhaserGame />`, sinon `position: absolute; inset: 0` ne s'ancre pas au canvas.
