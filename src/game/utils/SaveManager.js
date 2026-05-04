@@ -1,12 +1,12 @@
 // Gestion de la sauvegarde via localStorage
-const SAVE_KEY = 'wizard_game_save_v2';
+const SAVE_KEY = 'wizard_game_save_v3';
 
 export const DEFAULT_STATE = () => ({
     introStep: 0,
     player: { hp: 10, maxHp: 10 },
-    killsByLevel: { foret: 0, chateau: 0, montagne: 0 },
+    killsByLevel: { monde: 0, chateau: 0, montagne: 0 },
     spells: ['feu'],
-    levelProgress: { foret: false, chateau: false, montagne: false },
+    levelProgress: { monde: false, chateau: false, montagne: false },
     bossDefeated: false,
     introDone: false
 });

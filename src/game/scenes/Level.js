@@ -7,15 +7,15 @@ import { virtualInput } from '../utils/VirtualInput';
 
 // Types d'ennemis qui ont un vrai sprite (transparent bg)
 const SPRITE_ANIMS = {
-    slime:          { key: 'slime',         anim: 'slime-idle',         scale: 4.0,  combatScale: 6.0 },
-    bird:           { key: 'bee',           anim: 'bee-fly',            scale: 2.0,  combatScale: 3.5 },
-    goblin:         { key: 'goblin',        anim: 'goblin-idle',        scale: 0.22 },
-    bat:            { key: 'bat',           anim: 'bat-fly',            scale: 2.5,  combatScale: 4.0 },
-    ghost:          { key: 'ghost',         anim: 'ghost-fly',          scale: 2.5,  combatScale: 4.0 },
-    orc:            { key: 'orc',           anim: 'orc-idle',           scale: 0.22 },
-    vampire:        { key: 'vampire',       anim: 'vampire-idle',       scale: 2.52, combatScale: 1.2 },
-    skeleton:       { key: 'skeleton',      anim: 'skeleton-idle',      scale: 2.5,  combatScale: 4.0 },
-    'skeleton-dark':{ key: 'skeleton-dark', anim: 'skeleton-dark-idle', scale: 2.5,  combatScale: 4.0 },
+    slime:          { key: 'slime',         anim: 'slime-idle',         scale: 2.0,  combatScale: 3.0 },
+    bird:           { key: 'bee',           anim: 'bee-fly',            scale: 1.0,  combatScale: 1.75 },
+    goblin:         { key: 'goblin',        anim: 'goblin-idle',        scale: 0.25, combatScale: 0.55 },
+    bat:            { key: 'bat',           anim: 'bat-fly',            scale: 1.25, combatScale: 2.0  },
+    ghost:          { key: 'ghost',         anim: 'ghost-fly',          scale: 1.25, combatScale: 2.0  },
+    orc:            { key: 'orc',           anim: 'orc-idle',           scale: 0.25, combatScale: 0.55 },
+    vampire:        { key: 'vampire',       anim: 'vampire-idle',       scale: 0.35, combatScale: 1.0  },
+    skeleton:       { key: 'skeleton',      anim: 'skeleton-idle',      scale: 1.25, combatScale: 2.0 },
+    'skeleton-dark':{ key: 'skeleton-dark', anim: 'skeleton-dark-idle', scale: 1.25, combatScale: 2.0 },
 };
 
 const ENEMY_DEFS = {
@@ -30,14 +30,35 @@ const ENEMY_DEFS = {
     goblin:         { flying: false, resistant: true  }
 };
 
-const LEVEL_BG = { foret: 'bg-forest', chateau: 'bg-chateau', montagne: 'bg-montagne' };
+const LEVEL_BG = { chateau: 'bg-chateau', montagne: 'bg-montagne' };
+
+// Coordonnées monde issues des zones Tiled (map 2048×2048)
+const MONDE_MAP_W = 2048, MONDE_MAP_H = 2048;
+const MONDE_SPAWN = { x: 1360, y: 1613 };  // objet "Point de départ" dans zones Tiled
+
+// Positions des ennemis en coordonnées monde, autour du point de spawn
+const MONDE_ENEMY_POSITIONS = [
+    { x: 1150, y: 1530, preferFlying: false },
+    { x: 1570, y: 1530, preferFlying: false },
+    { x: 1100, y: 1660, preferFlying: true  },
+    { x: 1620, y: 1660, preferFlying: true  },
+    { x: 1200, y: 1750, preferFlying: false },
+    { x: 1520, y: 1750, preferFlying: false },
+    { x: 1280, y: 1430, preferFlying: false },
+    { x: 1450, y: 1430, preferFlying: false },
+];
+
+// Portails en coordonnées monde — donjon géré par calque "Porte donjon", pas par cercle
+const MONDE_PORTALS = [
+    { id: 'montagne', label: 'Montagne', levelKey: 'montagne', x: 1263, y: 1008, color: 0xdd7700, progress: 'montagne' },
+];
 
 const LEVELS = {
-    foret:    { hpRange: [1, 2], killGoal: 10,
+    monde:    { hpRange: [1, 2], killGoal: 5,
         getTypes: () => gameState.data.spells.includes('glace') ? ['slime', 'bird', 'slime'] : ['slime'] },
-    chateau:  { hpRange: [3, 4], killGoal: 10,
+    chateau:  { hpRange: [3, 4], killGoal: 5,
         getTypes: () => gameState.data.spells.includes('glace') ? ['skeleton', 'skeleton-dark', 'bat', 'ghost', 'vampire'] : ['skeleton', 'skeleton-dark', 'vampire'] },
-    montagne: { hpRange: [5, 6], killGoal: 10,
+    montagne: { hpRange: [5, 6], killGoal: 5,
         getTypes: () => ['orc', 'goblin'] }
 };
 
@@ -56,52 +77,114 @@ export class Level extends Scene {
         this.W = W; this.H = H;
         this.t = 0;
         this.combat = null;
-        this.player = { x: 100, y: H * 0.8 };
+        this.player = this.levelKey === 'monde'
+            ? { x: MONDE_SPAWN.x, y: MONDE_SPAWN.y }
+            : { x: 100, y: H * 0.8 };
         this.particles = [];
         EventBus.emit('ui-mode', 'level');
 
-        this.add.image(W / 2, H / 2, LEVEL_BG[this.levelKey]).setDisplaySize(W, H).setDepth(0);
+        if (this.levelKey === 'monde') {
+            const map = this.make.tilemap({ key: 'world-map' });
+            const tsWall      = map.addTilesetImage('TX Tileset Wall',        'tx-wall');
+            const tsGrass     = map.addTilesetImage('TX Tileset Grass',       'tx-grass');
+            const tsProps     = map.addTilesetImage('TX Props',               'tx-props');
+            const tsPropsShad = map.addTilesetImage('TX Props with Shadow',   'tx-props-shad');
+            const tsStruct    = map.addTilesetImage('TX Struct',              'tx-struct');
+            const tsStone     = map.addTilesetImage('TX Tileset Stone Ground','tx-stone');
+            const tsPlantShad = map.addTilesetImage('TX Plant with Shadow',   'tx-plant-shad');
+            const allTs = [tsWall, tsGrass, tsProps, tsPropsShad, tsStruct, tsStone, tsPlantShad];
+            this.groundLayer    = map.createLayer('ground',    allTs, 0, 0).setDepth(1);
+            this.elevationLayer = map.createLayer('elevation', allTs, 0, 0).setDepth(2);
+            this.wallsLayer     = map.createLayer('walls',     allTs, 0, 0).setDepth(3);
+            const groundLayer    = this.groundLayer;
+            const elevationLayer = this.elevationLayer;
+            map.createLayer('decor1',       allTs, 0, 0).setDepth(4);
+            this.porteDonjonLayer = map.createLayer('Porte donjon', allTs, 0, 0).setDepth(5);
+
+            // Collecte les centres de tuiles valides pour le spawn des ennemis
+            this.mondeSpawnTiles = [];
+            const collectTiles = (layer) => layer.forEachTile(t => {
+                if (t.index !== -1) {
+                    const x = t.pixelX + 16, y = t.pixelY + 16;
+                    if (Math.hypot(x - MONDE_SPAWN.x, y - MONDE_SPAWN.y) > 150)
+                        this.mondeSpawnTiles.push({ x, y });
+                }
+            });
+            collectTiles(groundLayer);
+            collectTiles(elevationLayer);
+        } else {
+            this.add.image(W / 2, H / 2, LEVEL_BG[this.levelKey]).setDisplaySize(W, H).setDepth(0);
+        }
         this.enemies = [];
         this.enemyGraphicsList = [];
+
+        // Portails et labels (carte du monde uniquement)
+        this.portalGraphics = null;
+        this.portalLabels = [];
+        this.bossPortalLabel = null;
+        if (this.levelKey === 'monde') {
+            this.portalGraphics = this.add.graphics().setDepth(3);
+            this.portalLabels = MONDE_PORTALS.map(p =>
+                this.add.text(p.x, p.y - 48, p.label, {
+                    fontFamily: 'serif', fontSize: '16px', color: '#ffffff', fontStyle: 'bold',
+                    stroke: '#000000', strokeThickness: 3
+                }).setOrigin(0.5).setDepth(61)
+            );
+            this.bossPortalLabel = this.add.text(MONDE_SPAWN.x, MONDE_SPAWN.y - 50, '⚔ Dragon ⚔', {
+                fontFamily: 'serif', fontSize: '18px', color: '#f4c430', fontStyle: 'bold',
+                stroke: '#000000', strokeThickness: 3
+            }).setOrigin(0.5).setDepth(61).setVisible(false);
+        }
+
         this.particleGraphics = this.add.graphics().setDepth(20);
         this.uiGraphics = this.add.graphics();
 
         this.playerFacingRight = true;
-        this.wizardSprite = this.add.sprite(this.player.x, this.player.y, 'wizard-red')
-            .setScale(2.5)
+        this.wizardSprite = this.add.sprite(this.player.x, this.player.y, 'wiz-idle')
+            .setScale(0.6)
             .setDepth(30);
-        this.wizardSprite.play('wizard-idle');
+        this.wizardSprite.play('wiz-idle');
+
+        if (this.levelKey === 'monde') {
+            this.cameras.main.setBounds(0, 0, MONDE_MAP_W, MONDE_MAP_H);
+            this.cameras.main.startFollow(this.wizardSprite, true, 0.1, 0.1);
+        }
 
         this.spawnEnemies();
 
         // HUD
-        this.hpGraphics = this.add.graphics();
+        this.hpGraphics = this.add.graphics().setDepth(60);
         this.hpText = this.add.text(110, 25, '', {
             fontFamily: 'sans-serif', fontSize: '14px', color: '#ffffff', fontStyle: 'bold'
-        }).setOrigin(0.5);
-        this.spellsGraphics = this.add.graphics();
-        this.spellsLabel = this.add.text(20, 60, 'Sorts :', { fontFamily: 'sans-serif', fontSize: '12px', color: '#ffffff' });
+        }).setOrigin(0.5).setDepth(60);
+        this.spellsGraphics = this.add.graphics().setDepth(60);
+        this.spellsLabel = this.add.text(20, 60, 'Sorts :', { fontFamily: 'sans-serif', fontSize: '12px', color: '#ffffff' }).setDepth(60);
 
         this.killCounter = this.add.text(W - 20, 25, '', {
             fontFamily: 'sans-serif', fontSize: '14px', color: '#f4c430', fontStyle: 'bold',
             backgroundColor: 'rgba(0,0,0,0.7)', padding: { x: 10, y: 6 }
-        }).setOrigin(1, 0.5);
+        }).setOrigin(1, 0.5).setDepth(60);
 
         this.actionHint = this.add.text(0, 0, '', {
             fontFamily: 'sans-serif', fontSize: '12px', color: '#000000',
             backgroundColor: '#f4c430', padding: { x: 6, y: 3 }, fontStyle: 'bold'
-        }).setOrigin(0.5).setVisible(false);
+        }).setOrigin(0.5).setVisible(false).setDepth(60);
 
         this.exitHint = this.add.text(W / 2, 95, '', {
             fontFamily: 'sans-serif', fontSize: '12px', color: '#000000',
             backgroundColor: '#52c878', padding: { x: 8, y: 4 }, fontStyle: 'bold'
-        }).setOrigin(0.5).setVisible(false);
+        }).setOrigin(0.5).setVisible(false).setDepth(60);
 
-        this.messageBox = this.add.graphics().setVisible(false);
+        this.messageBox = this.add.graphics().setVisible(false).setDepth(60);
         this.messageText = this.add.text(W / 2, 115, '', {
             fontFamily: 'serif', fontSize: '18px', color: '#f4c430', fontStyle: 'bold'
-        }).setOrigin(0.5).setVisible(false);
+        }).setOrigin(0.5).setVisible(false).setDepth(60);
         this.messageTime = 0;
+
+        // Fixer le HUD à l'écran (indispensable quand la caméra scrolle sur le monde)
+        [this.hpGraphics, this.hpText, this.spellsGraphics, this.spellsLabel,
+         this.killCounter, this.exitHint, this.messageBox, this.messageText]
+            .forEach(o => o.setScrollFactor(0));
 
         this.createCombatUI();
 
@@ -121,6 +204,7 @@ export class Level extends Scene {
             glace: this.input.keyboard.addKey('TWO'),
             foudre: this.input.keyboard.addKey('THREE')
         };
+        this.tabKey = this.input.keyboard.addKey('TAB');
     }
 
     createCombatUI() {
@@ -197,9 +281,12 @@ export class Level extends Scene {
             fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        this.combatHint = this.add.text(W / 2, H * 0.83, 'Tape ta réponse puis Entrée · Échap pour fuir', {
+        this.combatHint = this.add.text(W / 2, H * 0.83, 'Tape ta réponse puis Entrée · Tab pour changer de sort · Échap pour fuir', {
             fontFamily: 'sans-serif', fontSize: '11px', color: '#aaaaaa'
         }).setOrigin(0.5);
+
+        this.combatLayer.setScrollFactor(0);
+        this.combatEnemySprite.setScrollFactor(0);
 
         this.combatLayer.add([
             overlay, box, this.combatTitle,
@@ -212,54 +299,130 @@ export class Level extends Scene {
     }
 
     spawnEnemies() {
-        // Détruit les anciens sprites/graphics
         this.enemies.forEach(e => { if (e.sprite) e.sprite.destroy(); });
         this.enemyGraphicsList.forEach(g => g.destroy());
         this.enemyGraphicsList = [];
         this.enemies = [];
 
         const lvl = LEVELS[this.levelKey];
-        const types = lvl.getTypes();
-        const count = 4;
-        for (let i = 0; i < count; i++) {
-            const type = types[Math.floor(Math.random() * types.length)];
-            const def = ENEMY_DEFS[type];
-            const hp = lvl.hpRange[0] + Math.floor(Math.random() * (lvl.hpRange[1] - lvl.hpRange[0] + 1));
-            const flying = def.flying;
-            const baseY = flying ? (this.H * 0.36 + Math.random() * this.H * 0.12) : (this.H * 0.65 + Math.random() * this.H * 0.16);
-            const ex = this.W * 0.4 + i * (this.W * 0.13) + Math.random() * 30;
-            const enemy = {
-                type, hp, maxHp: hp,
-                x: ex, y: baseY, baseY,
-                flash: 0, frozen: 0,
-                flying, resistant: def.resistant,
-                floatPhase: Math.random() * Math.PI * 2,
-                sprite: null
-            };
 
-            // Sprite (si disponible) ou graphics procédural
-            const cfg = SPRITE_ANIMS[type];
-            if (cfg) {
-                try {
-                    const sp = this.add.sprite(ex, baseY, cfg.key).setScale(cfg.scale).setDepth(10);
-                    try { sp.play(cfg.anim); } catch (_) { /* animation indisponible, sprite statique */ }
-                    enemy.sprite = sp;
-                } catch (err) {
-                    console.error(`[spawnEnemies] Échec sprite "${type}" (key:${cfg.key}):`, err);
-                }
+        if (this.levelKey === 'monde') {
+            const hasGlace = gameState.data.spells.includes('glace');
+            const pool = Phaser.Utils.Array.Shuffle([...(this.mondeSpawnTiles || MONDE_ENEMY_POSITIONS)]);
+            const total = 8, flyingSlots = 2;
+            for (let i = 0; i < Math.min(total, pool.length); i++) {
+                const preferFlying = i < flyingSlots;
+                const type = (preferFlying && hasGlace) ? 'bird' : 'slime';
+                this._spawnOneEnemy(type, pool[i].x, pool[i].y, lvl);
             }
-            // Graphics pour les effets (gel, HP bar) et les ennemis sans sprite
-            const g = this.add.graphics().setDepth(15);
-            this.enemyGraphicsList.push(g);
-            this.enemies.push(enemy);
+        } else {
+            const types = lvl.getTypes();
+            const count = 4;
+            for (let i = 0; i < count; i++) {
+                const type = types[Math.floor(Math.random() * types.length)];
+                const def = ENEMY_DEFS[type];
+                const flying = def.flying;
+                const baseY = flying
+                    ? (this.H * 0.36 + Math.random() * this.H * 0.12)
+                    : (this.H * 0.65 + Math.random() * this.H * 0.16);
+                const ex = this.W * 0.4 + i * (this.W * 0.13) + Math.random() * 30;
+                this._spawnOneEnemy(type, ex, baseY, lvl);
+            }
         }
 
-        // Texte verrou pour volants
         this.enemyLockTexts = this.enemies.map((e) => {
             return this.add.text(e.x, e.y - 50, '', {
                 fontFamily: 'sans-serif', fontSize: '16px', color: '#7fdbff', fontStyle: 'bold'
             }).setOrigin(0.5).setDepth(20);
         });
+    }
+
+    _spawnOneEnemy(type, ex, baseY, lvl) {
+        const def = ENEMY_DEFS[type];
+        const hp = lvl.hpRange[0] + Math.floor(Math.random() * (lvl.hpRange[1] - lvl.hpRange[0] + 1));
+        const flying = def.flying;
+        const enemy = {
+            type, hp, maxHp: hp,
+            x: ex, y: baseY, baseY,
+            flash: 0, frozen: 0,
+            flying, resistant: def.resistant,
+            floatPhase: Math.random() * Math.PI * 2,
+            sprite: null
+        };
+        const cfg = SPRITE_ANIMS[type];
+        if (cfg) {
+            try {
+                const sp = this.add.sprite(ex, baseY, cfg.key).setScale(cfg.scale).setDepth(10);
+                try { sp.play(cfg.anim); } catch (_) { /* animation indisponible, sprite statique */ }
+                enemy.sprite = sp;
+            } catch (err) {
+                console.error(`[spawnEnemies] Échec sprite "${type}" (key:${cfg.key}):`, err);
+            }
+        }
+        const g = this.add.graphics().setDepth(15);
+        this.enemyGraphicsList.push(g);
+        this.enemies.push(enemy);
+    }
+
+    findNearestPortal() {
+        if (this.levelKey !== 'monde') return null;
+        const s = gameState.data;
+        // Boss portal
+        const allDone = s.levelProgress.monde && s.levelProgress.chateau && s.levelProgress.montagne;
+        if (allDone && !s.bossDefeated) {
+            const bx = MONDE_SPAWN.x, by = MONDE_SPAWN.y;
+            if (Math.hypot(this.player.x - bx, this.player.y - by) < 70) {
+                return { id: 'boss', label: 'Dragon', x: bx, y: by };
+            }
+        }
+        // Level portals
+        for (const p of MONDE_PORTALS) {
+            if (Math.hypot(this.player.x - p.x, this.player.y - p.y) < 70) return p;
+        }
+        return null;
+    }
+
+    canWalkAt(wx, wy) {
+        if (!this.groundLayer) return true;
+        const onWalkable = this.groundLayer.getTileAtWorldXY(wx, wy) !== null ||
+                           this.elevationLayer.getTileAtWorldXY(wx, wy) !== null;
+        const onWall     = this.wallsLayer.getTileAtWorldXY(wx, wy) !== null;
+        return onWalkable && !onWall;
+    }
+
+    findNearestDoor() {
+        if (this.levelKey !== 'monde' || !this.porteDonjonLayer) return null;
+        const tile = this.porteDonjonLayer.getTileAtWorldXY(this.player.x, this.player.y);
+        return tile ? { id: 'donjon', levelKey: 'chateau', label: 'Donjon' } : null;
+    }
+
+    drawPortals() {
+        if (!this.portalGraphics) return;
+        const s = gameState.data;
+        this.portalGraphics.clear();
+        const allDone = s.levelProgress.monde && s.levelProgress.chateau && s.levelProgress.montagne;
+
+        MONDE_PORTALS.forEach((p, i) => {
+            const pulse = 0.55 + Math.sin(this.t * 0.07 + i) * 0.25;
+            this.portalGraphics.fillStyle(p.color, 0.35 + pulse * 0.25);
+            this.portalGraphics.fillCircle(p.x, p.y, 32);
+            this.portalGraphics.lineStyle(3, p.color, pulse);
+            this.portalGraphics.strokeCircle(p.x, p.y, 38);
+            const done = s.levelProgress[p.progress];
+            this.portalLabels[i].setText((done ? '★ ' : '') + p.label);
+        });
+
+        // Boss portal
+        if (allDone && !s.bossDefeated) {
+            const pulse = 0.5 + Math.sin(this.t * 0.1) * 0.35;
+            this.portalGraphics.fillStyle(Colors.gold, pulse * 0.6);
+            this.portalGraphics.fillCircle(MONDE_SPAWN.x, MONDE_SPAWN.y, 34);
+            this.portalGraphics.lineStyle(3, Colors.gold, pulse);
+            this.portalGraphics.strokeCircle(MONDE_SPAWN.x, MONDE_SPAWN.y, 40);
+            this.bossPortalLabel.setVisible(true);
+        } else {
+            this.bossPortalLabel?.setVisible(false);
+        }
     }
 
     findNearestEnemy() {
@@ -367,7 +530,7 @@ export class Level extends Scene {
                 const reachedGoal = gameState.data.killsByLevel[this.levelKey] >= lvl.killGoal;
                 if (reachedGoal && !gameState.data.levelProgress[this.levelKey]) {
                     gameState.data.levelProgress[this.levelKey] = true;
-                    if (this.levelKey === 'foret' && !gameState.data.spells.includes('glace')) {
+                    if (this.levelKey === 'monde' && !gameState.data.spells.includes('glace')) {
                         gameState.data.spells.push('glace');
                         this.showMessage('★ Sort de Glace débloqué ! ★', 180);
                     } else if (this.levelKey === 'chateau' && !gameState.data.spells.includes('foudre')) {
@@ -492,7 +655,7 @@ export class Level extends Scene {
             this.combatEnemyGraphics.clear();
             this.combatEnemyGraphics.x = W / 2;
             this.combatEnemyGraphics.y = H * 0.28;
-            this.combatEnemyGraphics.setScale(2.5);
+            this.combatEnemyGraphics.setScale(1.25);
             drawEnemy(this.combatEnemyGraphics, { ...c.enemy, x: 0, y: 0 }, this.t, { showHpBar: false });
         }
 
@@ -580,6 +743,18 @@ export class Level extends Scene {
         if (Phaser.Input.Keyboard.JustDown(this.backspaceKey) || virtualInput.backspace) {
             virtualInput.backspace = false;
             this.combat.input = this.combat.input.slice(0, -1);
+            return;
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.tabKey)) {
+            const available = gameState.data.spells.filter(s =>
+                this.combat.locked !== 'must_freeze' || s === 'glace'
+            );
+            if (available.length > 1) {
+                const idx = available.indexOf(this.combat.spell);
+                this.combat.spell = available[(idx + 1) % available.length];
+                this.generateOp(this.combat.spell);
+                this.combat.feedback = '';
+            }
             return;
         }
         for (let i = 0; i <= 9; i++) {
@@ -674,53 +849,103 @@ export class Level extends Scene {
         if (this.combat) {
             this.handleCombatInput();
             this.drawCombat();
-            if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-attack') {
-                this.wizardSprite.play('wizard-attack');
+            if (this.wizardSprite.anims.currentAnim?.key !== 'wiz-attack') {
+                this.wizardSprite.play('wiz-attack');
             }
         } else {
             // Mouvement
             const sp = 3;
-            let moved = false;
-            if (this.cursors.left.isDown  || virtualInput.left)  { this.player.x -= sp; this.playerFacingRight = false; moved = true; }
-            if (this.cursors.right.isDown || virtualInput.right) { this.player.x += sp; this.playerFacingRight = true;  moved = true; }
-            if (this.cursors.up.isDown    || virtualInput.up)    { this.player.y -= sp; moved = true; }
-            if (this.cursors.down.isDown  || virtualInput.down)  { this.player.y += sp; moved = true; }
-            this.player.x = Math.max(20, Math.min(W - 20, this.player.x));
-            this.player.y = Math.max(H * 0.3, Math.min(H * 0.95, this.player.y));
+            let dx = 0, dy = 0;
+            if (this.cursors.left.isDown  || virtualInput.left)  { dx = -sp; this.playerFacingRight = false; }
+            if (this.cursors.right.isDown || virtualInput.right) { dx =  sp; this.playerFacingRight = true;  }
+            if (this.cursors.up.isDown    || virtualInput.up)    { dy = -sp; }
+            if (this.cursors.down.isDown  || virtualInput.down)  { dy =  sp; }
+            const moved = dx !== 0 || dy !== 0;
 
-            const animKey = moved ? 'wizard-run' : 'wizard-idle';
+            if (this.levelKey === 'monde') {
+                if (dx && this.canWalkAt(this.player.x + dx, this.player.y)) this.player.x += dx;
+                if (dy && this.canWalkAt(this.player.x, this.player.y + dy)) this.player.y += dy;
+            } else {
+                this.player.x += dx;
+                this.player.y += dy;
+                this.player.x = Math.max(20, Math.min(W - 20, this.player.x));
+                this.player.y = Math.max(H * 0.3, Math.min(H * 0.95, this.player.y));
+            }
+
+            const animKey = moved ? 'wiz-run' : 'wiz-idle';
             if (this.wizardSprite.anims.currentAnim?.key !== animKey) {
                 this.wizardSprite.play(animKey);
             }
 
-            // Détection ennemi proche
-            const near = this.findNearestEnemy();
-            if (near) {
-                this.actionHint.setText('Espace pour combattre').setPosition(near.x, near.y - 50).setVisible(true);
-                if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || virtualInput.space) {
-                    virtualInput.space = false;
-                    this.startCombat(near);
-                }
-            } else {
-                this.actionHint.setVisible(false);
-            }
+            if (this.levelKey === 'monde') {
+                // Carte du monde : ennemis + portails
+                const near = this.findNearestEnemy();
+                const nearPortal = near ? null : this.findNearestPortal();
+                const nearDoor   = !near && !nearPortal ? this.findNearestDoor() : null;
 
-            // Retour au hub
-            if (Phaser.Input.Keyboard.JustDown(this.hKey) || virtualInput.h) {
-                virtualInput.h = false;
-                this.scene.start('Hub');
-                return;
+                if (near) {
+                    this.actionHint.setText('Espace pour combattre').setPosition(near.x, near.y - 50).setVisible(true);
+                    if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || virtualInput.space) {
+                        virtualInput.space = false;
+                        this.startCombat(near);
+                    }
+                } else if (nearPortal) {
+                    const hint = nearPortal.id === 'boss'
+                        ? '⚔ Espace pour le combat final !'
+                        : `Espace pour entrer au ${nearPortal.label}`;
+                    this.actionHint.setText(hint).setPosition(nearPortal.x, nearPortal.y - 55).setVisible(true);
+                    if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || virtualInput.space) {
+                        virtualInput.space = false;
+                        if (nearPortal.id === 'boss') {
+                            this.scene.start('Boss');
+                        } else {
+                            this.scene.start('Level', { level: nearPortal.levelKey });
+                        }
+                        return;
+                    }
+                } else if (nearDoor) {
+                    this.actionHint.setText(`Espace pour entrer au ${nearDoor.label}`).setPosition(this.player.x, this.player.y - 50).setVisible(true);
+                    if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || virtualInput.space) {
+                        virtualInput.space = false;
+                        this.scene.start('Level', { level: nearDoor.levelKey });
+                        return;
+                    }
+                } else {
+                    this.actionHint.setVisible(false);
+                }
+                this.drawPortals();
+                this.exitHint.setVisible(false);
+
+            } else {
+                // Sous-niveaux (donjon, montagne)
+                const near = this.findNearestEnemy();
+                if (near) {
+                    this.actionHint.setText('Espace pour combattre').setPosition(near.x, near.y - 50).setVisible(true);
+                    if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || virtualInput.space) {
+                        virtualInput.space = false;
+                        this.startCombat(near);
+                    }
+                } else {
+                    this.actionHint.setVisible(false);
+                }
+
+                // Retour à la carte du monde
+                if (Phaser.Input.Keyboard.JustDown(this.hKey) || virtualInput.h) {
+                    virtualInput.h = false;
+                    this.scene.start('Level', { level: 'monde' });
+                    return;
+                }
+
+                // Indication retour quand niveau terminé
+                if (gameState.data.killsByLevel[this.levelKey] >= lvl.killGoal) {
+                    this.exitHint.setText('Niveau terminé ! Appuie sur H pour revenir').setVisible(true);
+                } else {
+                    this.exitHint.setVisible(false);
+                }
             }
         }
 
         this.drawHUD();
-
-        // Indication retour hub si niveau terminé
-        if (gameState.data.killsByLevel[this.levelKey] >= lvl.killGoal) {
-            this.exitHint.setText('Niveau terminé ! Appuie sur H pour revenir').setVisible(true);
-        } else {
-            this.exitHint.setVisible(false);
-        }
 
         // Message
         if (this.messageTime > 0) {

@@ -11,6 +11,10 @@ export class Hub extends Scene {
     }
 
     create() {
+        this.scene.start('Level', { level: 'monde' });
+    }
+
+    _unused_create() {
         const W = this.scale.width;
         const H = this.scale.height;
         this.W = W; this.H = H;

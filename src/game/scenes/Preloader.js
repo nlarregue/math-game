@@ -28,9 +28,16 @@ export class Preloader extends Scene {
             barFill.fillRect(W / 2 - 160, H / 2, 320 * p, 16);
         });
 
-        // ── Sorcier ──────────────────────────────────────────────
-        // Ligne 5 de Sprite-0002.png : 12 frames 32×32 (dos, gauche×3, face×3, droite×3)
+        // ── Sorcier (ancien, conservé pour l'intro) ──────────────
         this.load.spritesheet('wizard-red', 'assets/wizard-red.png', { frameWidth: 32, frameHeight: 32 });
+
+        // ── Sorcier (Wizard_Asset_Pack — utilisé dans Level et Boss) ──
+        const wizBase = 'assets/sprites/Wizard_Asset_Pack/SPRITE_SHEET/';
+        this.load.spritesheet('wiz-idle',   wizBase + 'IDLE/Wizard_Idle.png',              { frameWidth: 93, frameHeight: 77 });
+        this.load.spritesheet('wiz-walk',   wizBase + 'SIDE_WALK/Wizard_Side_Walk.png',    { frameWidth: 93, frameHeight: 77 });
+        this.load.spritesheet('wiz-attack', wizBase + 'ATTACK_1/Wizard_1Attack.png',       { frameWidth: 93, frameHeight: 77 });
+        this.load.spritesheet('wiz-hurt',   wizBase + 'HURT/Wizard_Hurt.png',              { frameWidth: 93, frameHeight: 77 });
+        this.load.spritesheet('wiz-death',  wizBase + 'DEATH/Wizard_Death.png',            { frameWidth: 93, frameHeight: 77 });
 
         // ── Monstres ─────────────────────────────────────────────
         this.load.spritesheet('slime',   'assets/sprites/Mystic Rpg FREE/ART/Enemies/Enemies_Green_Slime.png', { frameWidth: 16, frameHeight: 16 });
@@ -47,29 +54,55 @@ export class Preloader extends Scene {
         // ── Décors ───────────────────────────────────────────────
         this.load.image('wizard-tower',     'assets/wizard-tower.png');
         this.load.image('fantasy-library', 'assets/mystical-house.png');
-        this.load.image('bg-forest',   'assets/sprites/Free Pixel Art Forest/Preview/Background.png');
+        this.load.image('bg-monde',    'assets/sprites/Pixel Art Top Down/Scene Overview.png');
         this.load.image('bg-chateau',  'assets/sprites/Pixel-Art-Battlegrounds/PNG/Battleground2/Bright/Battleground2.png');
         this.load.image('bg-montagne', 'assets/sprites/Pixel-Art-Battlegrounds/PNG/Battleground1/Bright/Battleground1.png');
         this.load.image('bg-boss',     'assets/sprites/Pixel-Art-Battlegrounds/PNG/Battleground4/Bright/Battleground4.png');
         this.load.image('bg-hub',      'assets/sprites/Pixel-Art-Battlegrounds/PNG/Battleground3/Bright/Battleground3.png');
+
+        // Tilemap carte monde
+        this.load.tilemapTiledJSON('world-map', 'assets/world.json');
+        this.load.image('tx-wall',       'assets/sprites/Pixel Art Top Down/Texture/TX Tileset Wall.png');
+        this.load.image('tx-grass',      'assets/sprites/Pixel Art Top Down/Texture/TX Tileset Grass.png');
+        this.load.image('tx-props',      'assets/sprites/Pixel Art Top Down/Texture/TX Props.png');
+        this.load.image('tx-props-shad', 'assets/sprites/Pixel Art Top Down/Texture/Extra/TX Props with Shadow.png');
+        this.load.image('tx-struct',     'assets/sprites/Pixel Art Top Down/Texture/TX Struct.png');
+        this.load.image('tx-stone',      'assets/sprites/Pixel Art Top Down/Texture/TX Tileset Stone Ground.png');
+        this.load.image('tx-plant-shad', 'assets/sprites/Pixel Art Top Down/Texture/Extra/TX Plant with Shadow.png');
+
+        // Décors forêt top-down
+        this.load.image('forest-tree-1', 'assets/forest_tree_1.png');
+        this.load.image('forest-tree-2', 'assets/forest_tree_2.png');
+        this.load.image('forest-tree-3', 'assets/forest_tree_3.png');
+        this.load.image('forest-bush-3', 'assets/forest_bush_3.png');
+        this.load.image('forest-bush-4', 'assets/forest_bush_4.png');
+        this.load.image('forest-bush-5', 'assets/forest_bush_5.png');
+        this.load.image('forest-rock-1', 'assets/forest_rock_1.png');
     }
 
     create() {
         this.createAnimations();
         if (gameState.data.introDone) {
-            this.scene.start('Hub');
+            this.scene.start('Level', { level: 'monde' });
         } else {
             this.scene.start('Intro');
         }
     }
 
     createAnimations() {
-        // Sorcier (wizard-red.png : 12 frames — 0-2 dos, 3-5 gauche+bâton, 6-8 face, 9-11 droite)
-        this.anims.create({ key: 'wizard-idle',   frames: this.anims.generateFrameNumbers('wizard-red', { start: 6, end: 8 }), frameRate: 4,  repeat: -1 });
-        this.anims.create({ key: 'wizard-run',    frames: this.anims.generateFrameNumbers('wizard-red', { start: 3, end: 5 }), frameRate: 8,  repeat: -1 });
-        this.anims.create({ key: 'wizard-attack', frames: this.anims.generateFrameNumbers('wizard-red', { start: 3, end: 5 }), frameRate: 12, repeat: -1 });
+        // Ancien sorcier (conservé pour l'intro)
+        this.anims.create({ key: 'wizard-idle',   frames: this.anims.generateFrameNumbers('wizard-red', { start: 6, end: 8  }), frameRate: 4,  repeat: -1 });
+        this.anims.create({ key: 'wizard-run',    frames: this.anims.generateFrameNumbers('wizard-red', { start: 3, end: 5  }), frameRate: 8,  repeat: -1 });
+        this.anims.create({ key: 'wizard-attack', frames: this.anims.generateFrameNumbers('wizard-red', { start: 3, end: 5  }), frameRate: 12, repeat: -1 });
         this.anims.create({ key: 'wizard-hit',    frames: this.anims.generateFrameNumbers('wizard-red', { start: 9, end: 11 }), frameRate: 10, repeat: 0  });
         this.anims.create({ key: 'wizard-death',  frames: this.anims.generateFrameNumbers('wizard-red', { start: 0, end: 2  }), frameRate: 6,  repeat: 0  });
+
+        // Nouveau sorcier (Wizard_Asset_Pack) — Level et Boss
+        this.anims.create({ key: 'wiz-idle',   frames: this.anims.generateFrameNumbers('wiz-idle',   { start: 0, end: 6  }), frameRate: 7,  repeat: -1 });
+        this.anims.create({ key: 'wiz-run',    frames: this.anims.generateFrameNumbers('wiz-walk',   { start: 0, end: 7  }), frameRate: 10, repeat: -1 });
+        this.anims.create({ key: 'wiz-attack', frames: this.anims.generateFrameNumbers('wiz-attack', { start: 0, end: 10 }), frameRate: 12, repeat: -1 });
+        this.anims.create({ key: 'wiz-hurt',   frames: this.anims.generateFrameNumbers('wiz-hurt',   { start: 0, end: 3  }), frameRate: 10, repeat: 0  });
+        this.anims.create({ key: 'wiz-death',  frames: this.anims.generateFrameNumbers('wiz-death',  { start: 0, end: 10 }), frameRate: 6,  repeat: 0  });
 
         // Slime : 16×16 px/frame, 5 cols × 4 rows — rangée 0 (frames 0-4) = idle
         this.anims.create({ key: 'slime-idle', frames: this.anims.generateFrameNumbers('slime', { start: 0, end: 4 }), frameRate: 6, repeat: -1 });

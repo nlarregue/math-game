@@ -29,10 +29,10 @@ export class Boss extends Scene {
         this.dragonGraphics = this.add.graphics();
         this.particleGraphics = this.add.graphics().setDepth(20);
 
-        this.wizardSprite = this.add.sprite(this.player.x, this.player.y, 'wizard-red')
-            .setScale(2.5)
+        this.wizardSprite = this.add.sprite(this.player.x, this.player.y, 'wiz-idle')
+            .setScale(0.6)
             .setDepth(30);
-        this.wizardSprite.play('wizard-idle');
+        this.wizardSprite.play('wiz-idle');
 
         // HP boss
         this.bossHpGraphics = this.add.graphics();
@@ -67,6 +67,7 @@ export class Boss extends Scene {
             glace: this.input.keyboard.addKey('TWO'),
             foudre: this.input.keyboard.addKey('THREE')
         };
+        this.tabKey = this.input.keyboard.addKey('TAB');
     }
 
     createCombatUI() {
@@ -127,7 +128,7 @@ export class Boss extends Scene {
             fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        this.combatHint = this.add.text(W / 2, H * 0.83, 'Tape ta réponse puis Entrée · Échap pour fuir', {
+        this.combatHint = this.add.text(W / 2, H * 0.83, 'Tape ta réponse puis Entrée · Tab pour changer de sort · Échap pour fuir', {
             fontFamily: 'sans-serif', fontSize: '11px', color: '#aaaaaa'
         }).setOrigin(0.5);
 
@@ -232,6 +233,16 @@ export class Boss extends Scene {
         if (Phaser.Input.Keyboard.JustDown(this.backspaceKey) || virtualInput.backspace) {
             virtualInput.backspace = false;
             this.combat.input = this.combat.input.slice(0, -1);
+            return;
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.tabKey)) {
+            const available = gameState.data.spells;
+            if (available.length > 1) {
+                const idx = available.indexOf(this.combat.spell);
+                this.combat.spell = available[(idx + 1) % available.length];
+                this.generateOp(this.combat.spell);
+                this.combat.feedback = '';
+            }
             return;
         }
         for (let i = 0; i <= 9; i++) {
@@ -376,16 +387,16 @@ export class Boss extends Scene {
         if (this.combat) {
             this.handleCombatInput();
             this.drawCombat();
-            if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-attack') {
-                this.wizardSprite.play('wizard-attack');
+            if (this.wizardSprite.anims.currentAnim?.key !== 'wiz-attack') {
+                this.wizardSprite.play('wiz-attack');
             }
             if (this.combat && this.combat.feedbackTime > 0) {
                 this.combat.feedbackTime--;
                 if (this.combat.feedbackTime === 0) this.combat.feedback = '';
             }
         } else {
-            if (this.wizardSprite.anims.currentAnim?.key !== 'wizard-idle') {
-                this.wizardSprite.play('wizard-idle');
+            if (this.wizardSprite.anims.currentAnim?.key !== 'wiz-idle') {
+                this.wizardSprite.play('wiz-idle');
             }
             if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || virtualInput.space) {
                 virtualInput.space = false;
