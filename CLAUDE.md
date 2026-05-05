@@ -275,7 +275,11 @@ La carte du monde utilise un vrai tilemap Tiled (`public/assets/world.json`), **
 | `walls` | Tile | 3 | Murs et falaises — bloquent le déplacement |
 | `decor1` | Tile | 4 | Arbres, rochers, objets décoratifs |
 | `Porte donjon` | Tile | 5 | Zone de déclenchement pour entrer dans le donjon |
+| `overhead1` | Tile | 49 | Première couche overhead (juste sous overhead) |
+| `overhead` | Tile | 50 | Toits de tunnels, voûtes — s'affiche au-dessus du sorcier (depth 30) |
 | `zones` | Object | — | Points d'intérêt (spawn joueur, portail montagne) |
+
+Les calques `overhead` et `overhead1` sont **optionnels** : le code vérifie leur existence avant de les créer. Ne pas les créer dans Tiled si pas de tunnel.
 
 **Tilesets chargés** (7 au total, tous embedded dans le JSON) :
 ```js
@@ -331,6 +335,13 @@ findNearestDoor() {
 ```
 
 > **Important tilesets Tiled** : les tilesets doivent être **embedded** (pas de références .tsx externes) pour que Phaser puisse lire le JSON. Dans Tiled : clic droit sur chaque tileset → "Embed Tileset" avant d'exporter.
+
+**Règles de construction des calques dans Tiled** :
+- Les propriétés de collision des tuiles (les pointillés dans l'éditeur de tileset) sont **ignorées** par le code — seul le calque sur lequel est posée la tuile compte.
+- On peut superposer plusieurs tuiles au même endroit en les posant sur des **calques différents** (ex: herbe sur `ground` + rebord décoratif sur `decor1` à la même case).
+- Les tuiles visuelles d'une arche/voûte que le joueur passe dessous vont sur `overhead`, pas sur `walls`.
+- Les bords visuels d'une falaise (le "flanc") vont sur `decor1`, pas sur `walls` — sinon le joueur est bloqué à distance de la rampe.
+- Une tuile "demi-case" visuellement occupe quand même une **case entière 32×32 px** dans la grille : si posée sur `walls`, elle bloque toute la case.
 
 ### Dessin procédural (ennemis sans sprite + dragon + décors Intro)
 Les fonctions de `Drawing.js` prennent un objet `Graphics` en premier paramètre :

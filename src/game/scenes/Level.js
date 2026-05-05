@@ -100,6 +100,8 @@ export class Level extends Scene {
             const elevationLayer = this.elevationLayer;
             map.createLayer('decor1',       allTs, 0, 0).setDepth(4);
             this.porteDonjonLayer = map.createLayer('Porte donjon', allTs, 0, 0).setDepth(5);
+            if (map.getLayer('overhead1')) map.createLayer('overhead1', allTs, 0, 0).setDepth(49);
+            if (map.getLayer('overhead'))  map.createLayer('overhead',  allTs, 0, 0).setDepth(50);
 
             // Collecte les centres de tuiles valides pour le spawn des ennemis
             this.mondeSpawnTiles = [];
